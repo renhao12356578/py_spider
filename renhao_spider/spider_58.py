@@ -39,17 +39,17 @@ class Spider58:
                 
                 # 检查是否被重定向到验证码页面
                 if '验证码' in response.text or 'captcha' in response.url.lower():
-                    print(f"⚠️  遇到验证码，等待更长时间...")
+                    print(f"[WARN] 遇到验证码，等待更长时间...")
                     time.sleep(random.uniform(5, 10))
                     continue
                 
                 if response.status_code == 200:
                     return response.text
                 else:
-                    print(f"❌ 请求失败，状态码: {response.status_code}")
+                    print(f"[ERR] 请求失败，状态码: {response.status_code}")
                     
             except Exception as e:
-                print(f"❌ 请求异常: {e}")
+                print(f"[ERR] 请求异常: {e}")
                 if i < retry - 1:
                     time.sleep(random.uniform(2, 5))
         
@@ -64,14 +64,14 @@ class Spider58:
         items = soup.select('div.property')
         
         if not items:
-            print("⚠️  未找到房源列表，尝试其他选择器...")
+            print("[WARN] 未找到房源列表，尝试其他选择器...")
             # 备用选择器
             items = soup.find_all('div', class_='property')
         
         if items:
-            print(f"✅ 找到 {len(items)} 个房源")
+            print(f"[OK] 找到 {len(items)} 个房源")
         else:
-            print("❌ 未找到任何房源信息")
+            print("[ERR] 未找到任何房源信息")
         
         for item in items:
             try:
@@ -79,7 +79,7 @@ class Spider58:
                 if house_info:
                     houses.append(house_info)
             except Exception as e:
-                print(f"⚠️  解析单个房源时出错: {e}")
+                print(f"[WARN] 解析单个房源时出错: {e}")
                 continue
         
         return houses
@@ -183,7 +183,7 @@ class Spider58:
                 return house_info
                 
         except Exception as e:
-            print(f"⚠️  提取信息时出错: {e}")
+            print(f"[WARN] 提取信息时出错: {e}")
             import traceback
             traceback.print_exc()
         
@@ -192,7 +192,7 @@ class Spider58:
     def save_to_csv(self, filename='houses_58.csv'):
         """保存数据到CSV文件"""
         if not self.houses:
-            print("❌ 没有数据可保存")
+            print("[ERR] 没有数据可保存")
             return
         
         # 收集所有可能的字段
@@ -221,18 +221,18 @@ class Spider58:
                         row[key] = value
                 writer.writerow(row)
         
-        print(f"✅ 数据已保存到 {filename}，共 {len(self.houses)} 条记录")
+        print(f"[OK] 数据已保存到 {filename}，共 {len(self.houses)} 条记录")
 
     def save_to_json(self, filename='houses_58.json'):
         """保存数据到JSON文件"""
         if not self.houses:
-            print("❌ 没有数据可保存")
+            print("[ERR] 没有数据可保存")
             return
         
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(self.houses, f, ensure_ascii=False, indent=2)
         
-        print(f"✅ 数据已保存到 {filename}，共 {len(self.houses)} 条记录")
+        print(f"[OK] 数据已保存到 {filename}，共 {len(self.houses)} 条记录")
 
     def crawl(self, max_pages=5, use_local_html=False):
         """爬取指定页数的数据
@@ -242,25 +242,25 @@ class Spider58:
             use_local_html: 如果为True，使用本地58.html文件进行测试
         """
         if use_local_html:
-            print("📄 使用本地HTML文件进行测试...")
+            print("[INFO] 使用本地HTML文件进行测试...")
             try:
                 with open('58.html', 'r', encoding='utf-8') as f:
                     html = f.read()
                 houses = self.parse_house_list(html)
                 if houses:
                     self.houses.extend(houses)
-                    print(f"✅ 从本地文件成功提取 {len(houses)} 条房源信息")
+                    print(f"[OK] 从本地文件成功提取 {len(houses)} 条房源信息")
                 else:
-                    print("❌ 从本地文件未找到房源信息")
+                    print("[ERR] 从本地文件未找到房源信息")
             except FileNotFoundError:
-                print("❌ 未找到58.html文件，切换到在线爬取模式")
+                print("[ERR] 未找到58.html文件，切换到在线爬取模式")
                 use_local_html = False
         
         if not use_local_html:
-            print(f"🚀 开始爬取58同城北京二手房信息，计划爬取 {max_pages} 页...")
+            print(f"[START] 开始爬取58同城北京二手房信息，计划爬取 {max_pages} 页...")
             
             for page in range(1, max_pages + 1):
-                print(f"\n📄 正在爬取第 {page} 页...")
+                print(f"\n[PAGE] 正在爬取第 {page} 页...")
                 
                 # 构建URL（58同城的分页参数通常是PGTID和page）
                 if page == 1:
@@ -270,27 +270,23 @@ class Spider58:
                 
                 html = self.get_page(url)
                 if not html:
-                    print(f"❌ 第 {page} 页获取失败，跳过")
+                    print(f"[ERR] 第 {page} 页获取失败，跳过")
                     continue
                 
                 houses = self.parse_house_list(html)
                 if houses:
                     self.houses.extend(houses)
-                    print(f"✅ 第 {page} 页成功提取 {len(houses)} 条房源信息")
+                    print(f"[OK] 第 {page} 页成功提取 {len(houses)} 条房源信息")
                 else:
-                    print(f"⚠️  第 {page} 页未找到房源信息，可能页面结构已变化")
-                    # 保存当前HTML用于调试
-                    with open(f'debug_page_{page}.html', 'w', encoding='utf-8') as f:
-                        f.write(html)
-                    print(f"   已保存页面HTML到 debug_page_{page}.html 供检查")
+                    print(f"[WARN] 第 {page} 页未找到房源信息，可能页面结构已变化")
                 
                 # 页面间延迟
                 if page < max_pages:
                     delay = random.uniform(3, 6)
-                    print(f"⏳ 等待 {delay:.1f} 秒后继续...")
+                    print(f"[WAIT] 等待 {delay:.1f} 秒后继续...")
                     time.sleep(delay)
         
-        print(f"\n🎉 爬取完成！共获取 {len(self.houses)} 条房源信息")
+        print(f"\n[DONE] 爬取完成！共获取 {len(self.houses)} 条房源信息")
         
         # 保存数据
         if self.houses:
@@ -298,14 +294,14 @@ class Spider58:
             self.save_to_json()
             
             # 打印前几条数据预览
-            print("\n📊 数据预览（前5条）：")
+            print("\n[PREVIEW] 数据预览（前5条）：")
             for i, house in enumerate(self.houses[:5], 1):
                 print(f"\n{i}. {house.get('title', 'N/A')}")
                 print(f"   价格: {house.get('price', 'N/A')}{house.get('price_unit', '万')}")
                 if house.get('price_per_sqm'):
                     print(f"   单价: {house.get('price_per_sqm', 'N/A')}")
                 print(f"   房型: {house.get('room_type', 'N/A')}")
-                print(f"   面积: {house.get('area', 'N/A')}㎡")
+                print(f"   面积: {house.get('area', 'N/A')}平方米")
                 print(f"   朝向: {house.get('orientation', 'N/A')}")
                 print(f"   小区: {house.get('community', 'N/A')}")
                 print(f"   位置: {house.get('location', 'N/A')}")
@@ -314,11 +310,11 @@ class Spider58:
                 if house.get('year'):
                     print(f"   建造年份: {house.get('year', 'N/A')}")
         else:
-            print("❌ 未获取到任何数据，请检查：")
+            print("[ERR] 未获取到任何数据，请检查：")
             print("   1. 网络连接是否正常")
             print("   2. 网站是否可访问")
             print("   3. 是否触发了反爬虫机制")
-            print("   4. 页面结构是否已变化（可查看debug_page_*.html文件）")
+            print("   4. 页面结构是否已变化")
 
 
 def main():
@@ -333,4 +329,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

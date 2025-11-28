@@ -1,0 +1,19 @@
+cd R:\works\py_spider\renhao_spider
+
+# 列出所有区域
+python spider_58_enhanced.py --list
+
+# 爬取指定区域（爬取全部页面）
+python spider_58_enhanced.py -d 朝阳
+
+# 爬取指定区域，限制页数
+python spider_58_enhanced.py -d 朝阳 -p 10
+
+# 爬取指定商圈
+python spider_58_enhanced.py -d 朝阳 -a 望京
+
+# 爬取全部区域
+python spider_58_enhanced.py --all
+
+# 爬取全城（默认5页）
+python spider_58_enhanced.py
