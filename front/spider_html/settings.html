@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置 - 房产数据分析系统</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/settings.css">
+</head>
+<body>
+  <div class="settings-page">
+    <!-- 顶部导航 -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-logo">
+          <span class="logo-icon">🏠</span>
+          <span>房析</span>
+        </div>
+        
+        <nav class="header-nav">
+          <a href="index.html" class="header-nav-item">
+            <i data-lucide="home" style="width: 18px; height: 18px;"></i>
+            <span>首页</span>
+          </a>
+          <a href="beijing.html" class="header-nav-item">
+            <i data-lucide="building" style="width: 18px; height: 18px;"></i>
+            <span>北京分析</span>
+          </a>
+          <a href="report.html" class="header-nav-item">
+            <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+            <span>数据报告</span>
+          </a>
+          <a href="favorites.html" class="header-nav-item">
+            <i data-lucide="heart" style="width: 18px; height: 18px;"></i>
+            <span>我的收藏</span>
+          </a>
+          <a href="settings.html" class="header-nav-item active">
+            <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
+            <span>设置</span>
+          </a>
+        </nav>
+        
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-sm" id="userBtn">
+            <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+            <span id="userDisplay">用户</span>
+          </button>
+          <button class="btn btn-outline btn-sm" id="logoutBtn">退出</button>
+        </div>
+      </div>
+    </header>
+    
+    <!-- 主内容区 -->
+    <main class="settings-main">
+      <div class="settings-container">
+        <!-- 侧边栏 -->
+        <aside class="settings-sidebar">
+          <nav class="settings-nav">
+            <a href="#profile" class="settings-nav-item active">
+              <i data-lucide="user"></i>
+              <span>个人信息</span>
+            </a>
+            <a href="#security" class="settings-nav-item">
+              <i data-lucide="shield"></i>
+              <span>账户安全</span>
+            </a>
+            <a href="#notification" class="settings-nav-item">
+              <i data-lucide="bell"></i>
+              <span>通知设置</span>
+            </a>
+            <a href="#preference" class="settings-nav-item">
+              <i data-lucide="sliders"></i>
+              <span>偏好设置</span>
+            </a>
+            <a href="#about" class="settings-nav-item">
+              <i data-lucide="info"></i>
+              <span>关于我们</span>
+            </a>
+          </nav>
+        </aside>
+        
+        <!-- 设置内容 -->
+        <div class="settings-content">
+          <!-- 个人信息 -->
+          <section class="settings-section" id="profile">
+            <h2 class="section-title">
+              <i data-lucide="user"></i>
+              个人信息
+            </h2>
+            
+            <div class="profile-card">
+              <div class="avatar-section">
+                <div class="avatar">
+                  <i data-lucide="user" style="width: 48px; height: 48px;"></i>
+                </div>
+                <button class="btn btn-secondary btn-sm">更换头像</button>
+              </div>
+              
+              <form class="profile-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <input type="text" class="form-input" value="admin" readonly>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">昵称</label>
+                    <input type="text" class="form-input" placeholder="请输入昵称">
+                  </div>
+                </div>
+                
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">邮箱</label>
+                    <input type="email" class="form-input" placeholder="请输入邮箱">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">手机号</label>
+                    <input type="tel" class="form-input" placeholder="请输入手机号">
+                  </div>
+                </div>
+                
+                <div class="form-group">
+                  <label class="form-label">个人简介</label>
+                  <textarea class="form-input form-textarea" placeholder="介绍一下自己吧..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary">保存修改</button>
+                </div>
+              </form>
+            </div>
+          </section>
+          
+          <!-- 账户安全 -->
+          <section class="settings-section" id="security">
+            <h2 class="section-title">
+              <i data-lucide="shield"></i>
+              账户安全
+            </h2>
+            
+            <div class="security-list">
+              <div class="security-item">
+                <div class="security-info">
+                  <div class="security-icon">
+                    <i data-lucide="key"></i>
+                  </div>
+                  <div>
+                    <h4>登录密码</h4>
+                    <p>定期更换密码可以保护账户安全</p>
+                  </div>
+                </div>
+                <button class="btn btn-secondary btn-sm">修改</button>
+              </div>
+              
+              <div class="security-item">
+                <div class="security-info">
+                  <div class="security-icon">
+                    <i data-lucide="smartphone"></i>
+                  </div>
+                  <div>
+                    <h4>手机绑定</h4>
+                    <p>已绑定：138****8888</p>
+                  </div>
+                </div>
+                <button class="btn btn-secondary btn-sm">更换</button>
+              </div>
+              
+              <div class="security-item">
+                <div class="security-info">
+                  <div class="security-icon">
+                    <i data-lucide="mail"></i>
+                  </div>
+                  <div>
+                    <h4>邮箱绑定</h4>
+                    <p>已绑定：ad***@example.com</p>
+                  </div>
+                </div>
+                <button class="btn btn-secondary btn-sm">更换</button>
+              </div>
+              
+              <div class="security-item">
+                <div class="security-info">
+                  <div class="security-icon warning">
+                    <i data-lucide="shield-check"></i>
+                  </div>
+                  <div>
+                    <h4>两步验证</h4>
+                    <p>未开启，开启后可提高账户安全性</p>
+                  </div>
+                </div>
+                <button class="btn btn-primary btn-sm">开启</button>
+              </div>
+            </div>
+          </section>
+          
+          <!-- 通知设置 -->
+          <section class="settings-section" id="notification">
+            <h2 class="section-title">
+              <i data-lucide="bell"></i>
+              通知设置
+            </h2>
+            
+            <div class="notification-list">
+              <div class="notification-item">
+                <div class="notification-info">
+                  <h4>价格变动提醒</h4>
+                  <p>关注城市房价发生变动时通知您</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="notification-item">
+                <div class="notification-info">
+                  <h4>新报告发布</h4>
+                  <p>有新的市场分析报告发布时通知您</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="notification-item">
+                <div class="notification-info">
+                  <h4>收藏房源更新</h4>
+                  <p>收藏的房源信息变动时通知您</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="notification-item">
+                <div class="notification-info">
+                  <h4>系统通知</h4>
+                  <p>接收系统公告和更新通知</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="notification-item">
+                <div class="notification-info">
+                  <h4>邮件订阅</h4>
+                  <p>接收每周市场周报邮件</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </section>
+          
+          <!-- 偏好设置 -->
+          <section class="settings-section" id="preference">
+            <h2 class="section-title">
+              <i data-lucide="sliders"></i>
+              偏好设置
+            </h2>
+            
+            <div class="preference-list">
+              <div class="preference-item">
+                <div class="preference-info">
+                  <h4>默认城市</h4>
+                  <p>进入系统时默认展示的城市</p>
+                </div>
+                <select class="filter-select">
+                  <option value="beijing">北京</option>
+                  <option value="shanghai">上海</option>
+                  <option value="shenzhen">深圳</option>
+                  <option value="guangzhou">广州</option>
+                </select>
+              </div>
+              
+              <div class="preference-item">
+                <div class="preference-info">
+                  <h4>价格显示单位</h4>
+                  <p>房价数据的默认显示单位</p>
+                </div>
+                <select class="filter-select">
+                  <option value="sqm">元/㎡</option>
+                  <option value="total">万元(总价)</option>
+                </select>
+              </div>
+              
+              <div class="preference-item">
+                <div class="preference-info">
+                  <h4>数据更新频率</h4>
+                  <p>页面数据自动刷新的时间间隔</p>
+                </div>
+                <select class="filter-select">
+                  <option value="realtime">实时</option>
+                  <option value="5min">每5分钟</option>
+                  <option value="30min">每30分钟</option>
+                  <option value="manual">手动刷新</option>
+                </select>
+              </div>
+            </div>
+          </section>
+          
+          <!-- 关于我们 -->
+          <section class="settings-section" id="about">
+            <h2 class="section-title">
+              <i data-lucide="info"></i>
+              关于我们
+            </h2>
+            
+            <div class="about-card">
+              <div class="about-logo">
+                <span>🏠</span>
+                <h3>房析</h3>
+                <p>全国房产数据智能分析平台</p>
+              </div>
+              
+              <div class="about-info">
+                <div class="info-item">
+                  <span class="info-label">版本号</span>
+                  <span class="info-value">v1.0.0</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">更新日期</span>
+                  <span class="info-value">2024-12-10</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">技术支持</span>
+                  <span class="info-value">support@fangxi.com</span>
+                </div>
+              </div>
+              
+              <div class="about-links">
+                <a href="#" class="about-link">
+                  <i data-lucide="file-text"></i>
+                  <span>使用条款</span>
+                </a>
+                <a href="#" class="about-link">
+                  <i data-lucide="shield"></i>
+                  <span>隐私政策</span>
+                </a>
+                <a href="#" class="about-link">
+                  <i data-lucide="help-circle"></i>
+                  <span>帮助中心</span>
+                </a>
+                <a href="#" class="about-link">
+                  <i data-lucide="message-circle"></i>
+                  <span>意见反馈</span>
+                </a>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-info">
+          <span class="footer-logo">🏠 房析</span>
+          <span class="footer-copyright">© 2024 房产数据分析系统. All rights reserved.</span>
+        </div>
+        <div class="footer-links">
+          <a href="#">关于我们</a>
+          <a href="#">使用条款</a>
+          <a href="#">隐私政策</a>
+          <a href="#">联系我们</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/mock-data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    lucide.createIcons();
+    
+    // 退出登录
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+      Auth.logout();
+    });
+    
+    // 侧边栏导航
+    document.querySelectorAll('.settings-nav-item').forEach(item => {
+      item.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href').substring(1);
+        
+        document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+        
+        document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  </script>
+</body>
+</html>
+
