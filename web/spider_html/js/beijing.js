@@ -175,10 +175,10 @@ function renderDistrictMap(districts) {
       formatter: function(params) {
         const item = params[0];
         return `
-          <div style="font-weight: 600; margin-bottom: 8px;">${item.name}</div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6b7280;">均价</span>
-            <span style="font-weight: 600; color: #2563eb;">${item.value?.toLocaleString()} 元/㎡</span>
+          <div class="tooltip-title">${item.name}</div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">均价</span>
+            <span class="tooltip-value">${item.value?.toLocaleString()} 元/㎡</span>
           </div>
         `;
       }
@@ -492,7 +492,7 @@ function renderPagination() {
   
   // 上一页
   html += `<button class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>
-    <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i>
+    <i data-lucide="chevron-left"></i>
   </button>`;
   
   // 页码
@@ -502,7 +502,7 @@ function renderPagination() {
   if (startPage > 1) {
     html += `<button class="page-btn" data-page="1">1</button>`;
     if (startPage > 2) {
-      html += `<span style="color: var(--text-muted);">...</span>`;
+      html += `<span class="text-muted">...</span>`;
     }
   }
   
@@ -512,14 +512,14 @@ function renderPagination() {
   
   if (endPage < totalPages) {
     if (endPage < totalPages - 1) {
-      html += `<span style="color: var(--text-muted);">...</span>`;
+      html += `<span class="text-muted">...</span>`;
     }
     html += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
   }
   
   // 下一页
   html += `<button class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>
-    <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
+    <i data-lucide="chevron-right"></i>
   </button>`;
   
   container.innerHTML = html;

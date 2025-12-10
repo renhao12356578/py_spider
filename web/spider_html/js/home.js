@@ -379,7 +379,7 @@ async function searchCity(keyword) {
     } else {
       searchDropdown.innerHTML = `
         <div class="search-result-item">
-          <span style="color: var(--text-muted);">未找到相关城市</span>
+          <span class="text-muted">未找到相关城市</span>
         </div>
       `;
       searchDropdown.classList.add('active');

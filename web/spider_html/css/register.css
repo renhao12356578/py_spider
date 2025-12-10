@@ -275,6 +275,11 @@
   height: 52px;
 }
 
+.form-buttons .btn i {
+  width: 18px;
+  height: 18px;
+}
+
 /* 注册摘要 */
 .register-summary {
   text-align: center;

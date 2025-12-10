@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (error) {
       showError(error.message || '注册失败，请稍后重试');
       submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i data-lucide="check" style="width: 18px; height: 18px;"></i><span>完成注册</span>';
+      submitBtn.innerHTML = '<i data-lucide="check"></i><span>完成注册</span>';
       lucide.createIcons();
     }
   });

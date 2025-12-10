@@ -305,6 +305,11 @@
   gap: var(--spacing-sm);
 }
 
+.login-btn i {
+  width: 18px;
+  height: 18px;
+}
+
 .login-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);

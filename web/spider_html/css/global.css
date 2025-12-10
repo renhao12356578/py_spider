@@ -691,6 +691,16 @@ input:focus, textarea:focus, select:focus {
   font-weight: 600;
 }
 
+.header-nav-item i {
+  width: 18px;
+  height: 18px;
+}
+
+.header-actions .btn i {
+  width: 16px;
+  height: 16px;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
