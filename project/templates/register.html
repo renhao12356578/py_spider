@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>注册 - 房产数据分析系统</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/login.css">
+  <link rel="stylesheet" href="css/register.css">
+</head>
+<body>
+  <div class="register-page">
+    <!-- 左侧品牌区域 -->
+    <div class="login-brand">
+      <div class="brand-content">
+        <div class="brand-logo">
+          <div class="brand-logo-icon">🏠</div>
+          <span class="brand-logo-text">房析</span>
+        </div>
+        
+        <h1 class="brand-title">
+          加入我们<br>
+          <span>开启智能置业之旅</span>
+        </h1>
+        
+        <p class="brand-description">
+          注册即可获得免费试用权限，体验全国房产数据分析、AI智能推荐等专业服务。
+        </p>
+        
+        <div class="brand-features">
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i data-lucide="gift"></i>
+            </div>
+            <span class="feature-text">新用户注册享 7 天 Pro 会员体验</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i data-lucide="shield-check"></i>
+            </div>
+            <span class="feature-text">数据安全加密，隐私全面保护</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i data-lucide="headphones"></i>
+            </div>
+            <span class="feature-text">7×24 小时专业客服支持</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 右侧注册表单 -->
+    <div class="login-form-section">
+      <div class="login-form-container register-form-container">
+        <div class="login-header">
+          <h2 class="login-title">创建账户</h2>
+          <p class="login-subtitle">填写以下信息，快速完成注册</p>
+        </div>
+        
+        <!-- 错误提示 -->
+        <div class="login-error hidden" id="registerError">
+          <i data-lucide="alert-circle"></i>
+          <span id="errorMessage">注册失败</span>
+        </div>
+        
+        <!-- 成功提示 -->
+        <div class="register-success hidden" id="registerSuccess">
+          <i data-lucide="check-circle"></i>
+          <span>注册成功！正在跳转登录页...</span>
+        </div>
+        
+        <!-- 注册进度 -->
+        <div class="register-steps">
+          <div class="step active" data-step="1">
+            <div class="step-number">1</div>
+            <span class="step-label">基本信息</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="2">
+            <div class="step-number">2</div>
+            <span class="step-label">安全设置</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="3">
+            <div class="step-number">3</div>
+            <span class="step-label">完成注册</span>
+          </div>
+        </div>
+        
+        <form class="login-form register-form" id="registerForm">
+          <!-- 步骤1: 基本信息 -->
+          <div class="form-step active" id="step1">
+            <div class="form-group">
+              <label class="form-label">用户名 <span class="required">*</span></label>
+              <div class="input-with-icon">
+                <i data-lucide="user" class="input-icon"></i>
+                <input 
+                  type="text" 
+                  class="form-input" 
+                  id="username"
+                  placeholder="4-16位字母、数字或下划线"
+                  autocomplete="username"
+                  required
+                >
+                <span class="input-status" id="usernameStatus"></span>
+              </div>
+              <div class="form-hint" id="usernameHint"></div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">手机号 <span class="required">*</span></label>
+              <div class="input-with-icon">
+                <i data-lucide="smartphone" class="input-icon"></i>
+                <input 
+                  type="tel" 
+                  class="form-input" 
+                  id="phone"
+                  placeholder="请输入手机号"
+                  autocomplete="tel"
+                  required
+                >
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">邮箱</label>
+              <div class="input-with-icon">
+                <i data-lucide="mail" class="input-icon"></i>
+                <input 
+                  type="email" 
+                  class="form-input" 
+                  id="email"
+                  placeholder="请输入邮箱（选填）"
+                  autocomplete="email"
+                >
+              </div>
+            </div>
+            
+            <button type="button" class="login-btn" id="nextStep1">
+              <span>下一步</span>
+              <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+            </button>
+          </div>
+          
+          <!-- 步骤2: 安全设置 -->
+          <div class="form-step" id="step2">
+            <div class="form-group">
+              <label class="form-label">设置密码 <span class="required">*</span></label>
+              <div class="input-with-icon">
+                <i data-lucide="lock" class="input-icon"></i>
+                <input 
+                  type="password" 
+                  class="form-input" 
+                  id="password"
+                  placeholder="8-20位，包含字母和数字"
+                  autocomplete="new-password"
+                  required
+                >
+                <i data-lucide="eye-off" class="input-action" id="togglePassword"></i>
+              </div>
+              <div class="password-strength" id="passwordStrength">
+                <div class="strength-bar">
+                  <div class="strength-fill" id="strengthFill"></div>
+                </div>
+                <span class="strength-text" id="strengthText">密码强度</span>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">确认密码 <span class="required">*</span></label>
+              <div class="input-with-icon">
+                <i data-lucide="lock" class="input-icon"></i>
+                <input 
+                  type="password" 
+                  class="form-input" 
+                  id="confirmPassword"
+                  placeholder="请再次输入密码"
+                  autocomplete="new-password"
+                  required
+                >
+                <i data-lucide="eye-off" class="input-action" id="toggleConfirmPassword"></i>
+              </div>
+              <div class="form-hint" id="confirmHint"></div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">验证码 <span class="required">*</span></label>
+              <div class="captcha-group">
+                <div class="input-with-icon captcha-input">
+                  <i data-lucide="message-square" class="input-icon"></i>
+                  <input 
+                    type="text" 
+                    class="form-input" 
+                    id="captcha"
+                    placeholder="请输入验证码"
+                    required
+                  >
+                </div>
+                <button type="button" class="captcha-btn" id="sendCaptcha">获取验证码</button>
+              </div>
+            </div>
+            
+            <div class="form-buttons">
+              <button type="button" class="btn btn-secondary" id="prevStep2">
+                <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+                <span>上一步</span>
+              </button>
+              <button type="button" class="login-btn flex-1" id="nextStep2">
+                <span>下一步</span>
+                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- 步骤3: 完成注册 -->
+          <div class="form-step" id="step3">
+            <div class="register-summary">
+              <div class="summary-icon">
+                <i data-lucide="user-check"></i>
+              </div>
+              <h3>确认注册信息</h3>
+              <div class="summary-list">
+                <div class="summary-item">
+                  <span class="summary-label">用户名</span>
+                  <span class="summary-value" id="summaryUsername">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">手机号</span>
+                  <span class="summary-value" id="summaryPhone">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">邮箱</span>
+                  <span class="summary-value" id="summaryEmail">-</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="agreement-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="agreeTerms" required>
+                <span class="checkmark"></span>
+                <span>我已阅读并同意 <a href="#">《用户协议》</a> 和 <a href="#">《隐私政策》</a></span>
+              </label>
+            </div>
+            
+            <div class="form-buttons">
+              <button type="button" class="btn btn-secondary" id="prevStep3">
+                <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+                <span>上一步</span>
+              </button>
+              <button type="submit" class="login-btn flex-1" id="submitBtn">
+                <i data-lucide="check" style="width: 18px; height: 18px;"></i>
+                <span>完成注册</span>
+              </button>
+            </div>
+          </div>
+        </form>
+        
+        <div class="login-divider">
+          <span>或使用以下方式注册</span>
+        </div>
+        
+        <div class="social-login">
+          <button class="social-btn">
+            <i data-lucide="smartphone" class="social-icon"></i>
+            <span>微信注册</span>
+          </button>
+          <button class="social-btn">
+            <i data-lucide="scan" class="social-icon"></i>
+            <span>支付宝注册</span>
+          </button>
+        </div>
+        
+        <div class="login-footer">
+          <p>已有账户？<a href="login.html">立即登录</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/mock-data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/register.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
+
