@@ -132,6 +132,11 @@
   color: var(--text-muted);
 }
 
+.avatar i {
+  width: 48px;
+  height: 48px;
+}
+
 .profile-form {
   display: flex;
   flex-direction: column;

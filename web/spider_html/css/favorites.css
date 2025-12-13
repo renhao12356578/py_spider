@@ -46,6 +46,11 @@
   gap: var(--spacing-md);
 }
 
+.page-title i {
+  width: 36px;
+  height: 36px;
+}
+
 .page-subtitle {
   font-size: var(--text-lg);
   color: rgba(255, 255, 255, 0.8);
@@ -378,6 +383,11 @@
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--transition-fast);
+}
+
+.unfollow-btn i {
+  width: 16px;
+  height: 16px;
 }
 
 .unfollow-btn:hover {

@@ -245,6 +245,11 @@
   color: var(--info-color);
 }
 
+.stat-change i {
+  width: 14px;
+  height: 14px;
+}
+
 /* 主内容布局 */
 .content-grid {
   display: grid;
@@ -350,6 +355,12 @@
   height: 10px;
   border-radius: 2px;
 }
+
+.legend-color.level-1 { background: #d4e4fc; }
+.legend-color.level-2 { background: #85b8f8; }
+.legend-color.level-3 { background: #4d94f5; }
+.legend-color.level-4 { background: #2563eb; }
+.legend-color.level-5 { background: #1e40af; }
 
 /* 侧边栏 */
 .sidebar {
