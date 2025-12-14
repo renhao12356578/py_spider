@@ -1,53 +1,24 @@
-from flask import Flask, request, jsonify,Blueprint,render_template
+from flask import Flask, request, jsonify,Blueprint,render_template,redirect
 import uuid
 import re
 import os
 from datetime import datetime
 from pathlib import Path
-from py_spider.project.LLM.LLM import recomandation_prompt,get_area_statistics,call_spark_api
+from LLM.LLM import recomandation_prompt,get_area_statistics,call_spark_api
 
-app = Flask(__name__,
-            template_folder='templates',
-            static_folder='static'
-            )
+app = Flask(__name__,static_folder='../project_web',static_url_path='/project_web')
 
 # 会话存储目录
-SESSION_DIR = Path('LLM/chat_sessions')
-SESSION_DIR.mkdir(exist_ok=True)
+SESSION_DIR = Path(__file__).parent / 'LLM' / 'chat_sessions'
+SESSION_DIR.mkdir(parents=True, exist_ok=True)
 
 # 会话存储（生产环境建议使用Redis等持久化存储）
 session_storage = {}
 
-
 #基础界面调转
-@app.route('/index')
+@app.route('/')
 def index():
-    return render_template('index.html')
-
-@app.route('/beijing')
-def beijing_page():
-    return render_template('beijing.html')
-
-@app.route('/login')
-def login_page():
-    return render_template('login.html')
-
-@app.route('/register')
-def register_page():
-    return render_template('register.html')
-
-@app.route('/report')
-def report_page():
-    return render_template('report.html')
-
-@app.route('/favorites')
-def favorites_page():
-    return render_template('favorites.html')
-
-@app.route('/settings')
-def settings_page():
-    return render_template('settings.html')
-
+    return redirect('/project_web/index.html')
 
 def save_session_to_file(session_id):
     """将会话保存到文件"""
@@ -420,7 +391,7 @@ def clear_session(session_id):
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 # 导入数据库类
-from py_spider.project.LLM.report import ReportDatabase
+from LLM.report import ReportDatabase
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/api')
 db = ReportDatabase()

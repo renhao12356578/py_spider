@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>北京深度分析 - 房产数据分析系统</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- ECharts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/beijing.css">
+</head>
+<body>
+  <div class="beijing-page">
+    <!-- 顶部导航 -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-logo">
+          <span class="logo-icon">🏠</span>
+          <span>房析</span>
+        </div>
+        
+        <nav class="header-nav">
+          <a href="index.html" class="header-nav-item">
+            <i data-lucide="home"></i>
+            <span>首页</span>
+          </a>
+          <a href="beijing.html" class="header-nav-item active">
+            <i data-lucide="building"></i>
+            <span>北京分析</span>
+          </a>
+          <a href="report.html" class="header-nav-item">
+            <i data-lucide="file-text"></i>
+            <span>数据报告</span>
+          </a>
+          <a href="favorites.html" class="header-nav-item">
+            <i data-lucide="heart"></i>
+            <span>我的收藏</span>
+          </a>
+          <a href="settings.html" class="header-nav-item">
+            <i data-lucide="settings"></i>
+            <span>设置</span>
+          </a>
+        </nav>
+        
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-sm" id="userBtn">
+            <i data-lucide="user"></i>
+            <span id="userDisplay">用户</span>
+          </button>
+          <button class="btn btn-outline btn-sm" id="logoutBtn">退出</button>
+        </div>
+      </div>
+    </header>
+    
+    <!-- 页面横幅 -->
+    <section class="page-banner">
+      <div class="banner-content">
+        <nav class="banner-breadcrumb">
+          <a href="index.html">首页</a>
+          <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+          <span class="current">北京分析</span>
+        </nav>
+        
+        <h1 class="page-title">
+          🏙️ 北京房产深度分析
+          <span class="city-badge">
+            <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+            一线城市
+          </span>
+        </h1>
+        <p class="page-subtitle">基于 32,000+ 真实房源数据，提供多维度市场分析与 AI 智能推荐</p>
+        
+        <div class="stats-bar">
+          <div class="stats-bar-item">
+            <span class="stats-bar-value" id="bjAvgPrice">--</span>
+            <span class="stats-bar-label">平均单价 (元/㎡)</span>
+          </div>
+          <div class="stats-bar-item">
+            <span class="stats-bar-value" id="bjAvgTotal">--</span>
+            <span class="stats-bar-label">平均总价 (万元)</span>
+          </div>
+          <div class="stats-bar-item">
+            <span class="stats-bar-value" id="bjTotalCount">--</span>
+            <span class="stats-bar-label">在售房源数</span>
+          </div>
+          <div class="stats-bar-item">
+            <span class="stats-bar-value" id="bjHotDistrict">--</span>
+            <span class="stats-bar-label">热门区域</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 主内容区 -->
+    <main class="beijing-main main-content">
+      <!-- 标签页导航 -->
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="district">
+          <i data-lucide="map"></i>
+          <span>区域分析</span>
+        </button>
+        <button class="tab-btn" data-tab="analysis">
+          <i data-lucide="bar-chart-3"></i>
+          <span>特征分析</span>
+        </button>
+        <button class="tab-btn" data-tab="chart">
+          <i data-lucide="scatter-chart"></i>
+          <span>数据图表</span>
+        </button>
+        <button class="tab-btn" data-tab="ai">
+          <i data-lucide="brain"></i>
+          <span>AI 推荐</span>
+        </button>
+        <button class="tab-btn" data-tab="chat">
+          <i data-lucide="message-circle"></i>
+          <span>AI 对话</span>
+        </button>
+        <button class="tab-btn" data-tab="list">
+          <i data-lucide="list"></i>
+          <span>房源列表</span>
+        </button>
+      </nav>
+      
+      <!-- 区域分析 -->
+      <div class="tab-content active" id="tab-district">
+        <div class="district-section">
+          <!-- 区域地图 -->
+          <div class="district-map-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="map"></i>
+                <span>北京各区房价分布</span>
+              </h3>
+            </div>
+            <div class="district-map" id="districtMap"></div>
+          </div>
+          
+          <!-- 区域排名 -->
+          <div class="district-ranking-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="trophy"></i>
+                <span>行政区房价排名</span>
+              </h3>
+            </div>
+            <div class="district-list" id="districtList">
+              <div class="loading">
+                <div class="loading-spinner"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 特征分析 -->
+      <div class="tab-content" id="tab-analysis">
+        <div class="analysis-grid">
+          <!-- 楼层分析 -->
+          <div class="analysis-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="building"></i>
+                <span>楼层与房价关系</span>
+              </h3>
+            </div>
+            <div class="analysis-chart" id="floorChart"></div>
+          </div>
+          
+          <!-- 户型分析 -->
+          <div class="analysis-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="layout-grid"></i>
+                <span>户型与房价关系</span>
+              </h3>
+            </div>
+            <div class="analysis-chart" id="layoutChart"></div>
+          </div>
+          
+          <!-- 朝向分析 -->
+          <div class="analysis-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="sun"></i>
+                <span>朝向与房价关系</span>
+              </h3>
+            </div>
+            <div class="analysis-chart" id="orientationChart"></div>
+          </div>
+          
+          <!-- 电梯分析 -->
+          <div class="analysis-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="move-vertical"></i>
+                <span>电梯与房价关系</span>
+              </h3>
+            </div>
+            <div class="analysis-chart" id="elevatorChart"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 数据图表 -->
+      <div class="tab-content" id="tab-chart">
+        <div class="analysis-grid">
+          <!-- 散点图 -->
+          <div class="analysis-card analysis-card-full">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="scatter-chart"></i>
+                <span>面积-价格散点图</span>
+              </h3>
+              <div class="chart-tabs">
+                <button class="chart-tab active" data-district="">全部</button>
+                <button class="chart-tab" data-district="朝阳">朝阳</button>
+                <button class="chart-tab" data-district="海淀">海淀</button>
+                <button class="chart-tab" data-district="西城">西城</button>
+                <button class="chart-tab" data-district="东城">东城</button>
+              </div>
+            </div>
+            <div class="analysis-chart" id="scatterChart"></div>
+          </div>
+          
+          <!-- 箱线图 -->
+          <div class="analysis-card analysis-card-full">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="git-branch"></i>
+                <span>各区房价分布箱线图</span>
+              </h3>
+            </div>
+            <div class="analysis-chart" id="boxplotChart"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI 推荐 -->
+      <div class="tab-content" id="tab-ai">
+        <div class="ai-section">
+          <!-- 推荐表单 -->
+          <div class="ai-recommend-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
+                <span>AI 智能推荐</span>
+              </h3>
+            </div>
+            <form class="ai-form" id="recommendForm">
+              <div class="form-group">
+                <label class="form-label">
+                  <i data-lucide="wallet"></i>
+                  预算范围 (万元)
+                </label>
+                <div class="input-range">
+                  <input type="number" class="form-input" id="budgetMin" placeholder="最低" min="0">
+                  <span class="range-separator">至</span>
+                  <input type="number" class="form-input" id="budgetMax" placeholder="最高">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <i data-lucide="map-pin"></i>
+                  目标区域
+                </label>
+                <div class="option-group" id="districtOptions">
+                  <button type="button" class="option-btn" data-value="">不限</button>
+                  <button type="button" class="option-btn" data-value="朝阳">朝阳</button>
+                  <button type="button" class="option-btn" data-value="海淀">海淀</button>
+                  <button type="button" class="option-btn" data-value="西城">西城</button>
+                  <button type="button" class="option-btn" data-value="东城">东城</button>
+                  <button type="button" class="option-btn" data-value="丰台">丰台</button>
+                  <button type="button" class="option-btn" data-value="通州">通州</button>
+                  <button type="button" class="option-btn" data-value="大兴">大兴</button>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <i data-lucide="layout-grid"></i>
+                  户型偏好
+                </label>
+                <div class="option-group" id="layoutOptions">
+                  <button type="button" class="option-btn" data-value="">不限</button>
+                  <button type="button" class="option-btn" data-value="1室">1室</button>
+                  <button type="button" class="option-btn" data-value="2室">2室</button>
+                  <button type="button" class="option-btn" data-value="3室">3室</button>
+                  <button type="button" class="option-btn" data-value="4室">4室+</button>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <i data-lucide="maximize-2"></i>
+                  面积需求 (㎡)
+                </label>
+                <div class="input-range">
+                  <input type="number" class="form-input" id="areaMin" placeholder="最小" min="0">
+                  <span class="range-separator">至</span>
+                  <input type="number" class="form-input" id="areaMax" placeholder="最大">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <i data-lucide="building"></i>
+                  楼层偏好
+                </label>
+                <div class="option-group" id="floorOptions">
+                  <button type="button" class="option-btn" data-value="">不限</button>
+                  <button type="button" class="option-btn" data-value="低层">低层</button>
+                  <button type="button" class="option-btn" data-value="中层">中层</button>
+                  <button type="button" class="option-btn" data-value="高层">高层</button>
+                </div>
+              </div>
+              
+              <button type="submit" class="btn btn-primary btn-block btn-lg">
+                <i data-lucide="sparkles"></i>
+                <span>开始智能推荐</span>
+              </button>
+            </form>
+          </div>
+          
+          <!-- 推荐结果 -->
+          <div class="ai-result-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i data-lucide="home"></i>
+                <span>推荐房源</span>
+              </h3>
+              <div class="result-count" id="resultCount">
+                共找到 <span>0</span> 套匹配房源
+              </div>
+            </div>
+            <div class="recommend-list" id="recommendList">
+              <div class="empty-result">
+                <i data-lucide="search"></i>
+                <h4>开始搜索</h4>
+                <p>设置您的购房偏好，获取 AI 智能推荐</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI 对话 -->
+      <div class="tab-content" id="tab-chat">
+        <div class="ai-chat-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i data-lucide="bot"></i>
+              <span>AI 房产顾问</span>
+            </h3>
+          </div>
+          
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-message assistant">
+              <div class="chat-avatar">🤖</div>
+              <div>
+                <div class="chat-bubble">
+                  您好！我是您的 AI 房产顾问。我可以帮您：<br><br>
+                  • 分析北京各区房价走势<br>
+                  • 解答购房相关问题<br>
+                  • 提供投资建议<br><br>
+                  请问有什么可以帮助您的？
+                </div>
+                <div class="chat-time">刚刚</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+              <input 
+                type="text" 
+                class="chat-input" 
+                id="chatInput"
+                placeholder="输入您的问题..."
+              >
+              <button class="chat-send-btn" id="chatSendBtn">
+                <i data-lucide="send" style="width: 20px; height: 20px;"></i>
+              </button>
+            </div>
+            <div class="quick-questions">
+              <button class="quick-question" data-question="朝阳区现在均价多少？">朝阳区均价</button>
+              <button class="quick-question" data-question="500万预算买哪个区合适？">500万预算</button>
+              <button class="quick-question" data-question="海淀为什么比朝阳贵？">海淀 vs 朝阳</button>
+              <button class="quick-question" data-question="现在是买房的好时机吗？">买房时机</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 房源列表 -->
+      <div class="tab-content" id="tab-list">
+        <div class="house-list-section">
+          <div class="house-filters">
+            <select class="filter-select" id="houseDistrictFilter">
+              <option value="">全部区域</option>
+              <option value="朝阳">朝阳</option>
+              <option value="海淀">海淀</option>
+              <option value="西城">西城</option>
+              <option value="东城">东城</option>
+              <option value="丰台">丰台</option>
+              <option value="通州">通州</option>
+              <option value="大兴">大兴</option>
+            </select>
+            <select class="filter-select" id="houseLayoutFilter">
+              <option value="">全部户型</option>
+              <option value="1室">1室</option>
+              <option value="2室">2室</option>
+              <option value="3室">3室</option>
+              <option value="4室">4室+</option>
+            </select>
+            <select class="filter-select" id="housePriceFilter">
+              <option value="">全部价格</option>
+              <option value="0-300">300万以下</option>
+              <option value="300-500">300-500万</option>
+              <option value="500-800">500-800万</option>
+              <option value="800-1000">800-1000万</option>
+              <option value="1000-99999">1000万以上</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="filterSearchBtn">
+              <i data-lucide="search"></i>
+              搜索
+            </button>
+          </div>
+          
+          <div class="house-list" id="houseList">
+            <div class="loading">
+              <div class="loading-spinner"></div>
+            </div>
+          </div>
+          
+          <div class="pagination" id="pagination">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-info">
+          <span class="footer-logo">🏠 房析</span>
+          <span class="footer-copyright">© 2024 房产数据分析系统. All rights reserved.</span>
+        </div>
+        <div class="footer-links">
+          <a href="#">关于我们</a>
+          <a href="#">使用条款</a>
+          <a href="#">隐私政策</a>
+          <a href="#">联系我们</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/mock-data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ai-service.js"></script>
+  <script src="js/beijing.js"></script>
+  <script>
+    // 初始化 Lucide 图标
+    lucide.createIcons();
+  </script>
+</body>
+</html>
+

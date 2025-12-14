@@ -1,1 +1,0 @@
-"city_name"	"year"	"year_avg_price"	"month"	"month_avg_price"

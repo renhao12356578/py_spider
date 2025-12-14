@@ -12,7 +12,7 @@ from wsgiref.handlers import format_date_time
 import websocket
 from numpy.f2py.auxfuncs import throw_error
 
-from use_data import query_house_data_by_area,get_area_statistics
+from .use_data import query_house_data_by_area,get_area_statistics
 
 # ================= 配置区域 =================
 appid = "67e25832"

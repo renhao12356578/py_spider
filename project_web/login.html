@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 房产数据分析系统</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+  <div class="login-page">
+    <!-- 左侧品牌区域 -->
+    <div class="login-brand">
+      <div class="brand-content">
+        <div class="brand-logo">
+          <div class="brand-logo-icon">🏠</div>
+          <span class="brand-logo-text">房析</span>
+        </div>
+        
+        <h1 class="brand-title">
+          全国房产数据<br>
+          <span>智能分析平台</span>
+        </h1>
+        
+        <p class="brand-description">
+          基于海量真实交易数据，提供专业的房产市场分析、价格预测和智能推荐服务，助您做出明智的置业决策。
+        </p>
+        
+        <div class="brand-features">
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i data-lucide="map-pin"></i>
+            </div>
+            <span class="feature-text">覆盖全国 300+ 城市实时房价数据</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i data-lucide="bar-chart-3"></i>
+            </div>
+            <span class="feature-text">多维度数据分析与可视化展示</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i data-lucide="brain"></i>
+            </div>
+            <span class="feature-text">AI 智能推荐与市场评估报告</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 右侧登录表单 -->
+    <div class="login-form-section">
+      <div class="login-form-container">
+        <div class="login-header">
+          <h2 class="login-title">欢迎回来</h2>
+          <p class="login-subtitle">请登录您的账户以继续使用</p>
+        </div>
+        
+        <!-- 错误提示 -->
+        <div class="login-error hidden" id="loginError">
+          <i data-lucide="alert-circle"></i>
+          <span id="errorMessage">用户名或密码错误</span>
+        </div>
+        
+        <form class="login-form" id="loginForm">
+          <div class="form-group">
+            <label class="form-label">用户名 / 邮箱 / 手机号</label>
+            <div class="input-with-icon">
+              <i data-lucide="user" class="input-icon"></i>
+              <input 
+                type="text" 
+                class="form-input" 
+                id="username"
+                placeholder="请输入用户名"
+                autocomplete="username"
+                required
+              >
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">密码</label>
+            <div class="input-with-icon">
+              <i data-lucide="lock" class="input-icon"></i>
+              <input 
+                type="password" 
+                class="form-input" 
+                id="password"
+                placeholder="请输入密码"
+                autocomplete="current-password"
+                required
+              >
+              <i data-lucide="eye-off" class="input-action" id="togglePassword"></i>
+            </div>
+          </div>
+          
+          <div class="login-options">
+            <label class="remember-me">
+              <input type="checkbox" id="rememberMe">
+              <span>记住我</span>
+            </label>
+            <a href="#" class="forgot-password">忘记密码？</a>
+          </div>
+          
+          <button type="submit" class="login-btn" id="loginBtn">
+            <span>登录</span>
+          </button>
+        </form>
+        
+        <div class="login-divider">
+          <span>或使用以下方式登录</span>
+        </div>
+        
+        <div class="social-login">
+          <button class="social-btn">
+            <i data-lucide="smartphone" class="social-icon"></i>
+            <span>手机验证码</span>
+          </button>
+          <button class="social-btn">
+            <i data-lucide="scan" class="social-icon"></i>
+            <span>扫码登录</span>
+          </button>
+        </div>
+        
+        <div class="login-footer">
+          <p>还没有账户？<a href="register.html">立即注册</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/mock-data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/login.js"></script>
+  <script>
+    // 初始化 Lucide 图标
+    lucide.createIcons();
+  </script>
+</body>
+</html>
+
