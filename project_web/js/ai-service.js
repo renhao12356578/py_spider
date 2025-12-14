@@ -2,7 +2,6 @@
  * AI 服务模块
  * 房产数据分析系统
  */
-
 const AIService = {
   // 生成唯一会话 ID
   sessionId: null,

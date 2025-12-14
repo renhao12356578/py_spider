@@ -470,18 +470,38 @@ const MockData = {
       title: '2024年12月北京房产市场分析',
       type: 'monthly',
       city: '北京',
-      content: '<h2>市场概况</h2><p>2024年12月，北京二手房市场整体呈现回暖态势...</p>',
+      content: '一、市场概述\n2024年12月，北京二手房市场整体呈现回暖态势。受政策利好影响，购房者入市意愿明显提升，市场成交量稳步回升。\n\n二、价格分析\n本月全市二手房均价为65,000元/平方米，环比上涨0.5%，同比下降2.3%。其中：\n- 西城区均价最高，达95,000元/㎡\n- 东城区次之，约92,000元/㎡\n- 海淀区保持在78,000元/㎡左右\n\n三、成交分析\n本月成交量环比上涨15%，主要特点如下：\n1. 刚需户型（2室1厅）成交占比最高，达45%\n2. 90㎡以下中小户型最受欢迎\n3. 朝阳、海淀成交量位居前两位\n\n四、市场展望\n预计未来三个月市场将延续平稳态势，建议购房者：\n1. 关注政策动向，把握入市时机\n2. 优先考虑交通便利、配套成熟的区域\n3. 合理控制预算，避免过度杠杆',
       summary: '本月北京二手房成交量环比上涨15%，均价小幅回升，市场信心逐步恢复。',
       highlights: ['成交量环比上涨15%', '均价同比下降2.3%', '海淀区最受关注', '刚需户型成交活跃'],
       published_at: '2024-12-10T00:00:00Z',
-      author: '市场研究部'
+      author: '市场研究部',
     },
     
     // 我的报告
     myReports: {
       reports: [
-        { report_id: 100, title: '自定义报告 - 北京朝阳海淀', type: 'custom', status: 'completed', created_at: '2024-12-10T10:00:00Z', download_url: '#' },
-        { report_id: 99, title: '自定义报告 - 上海浦东', type: 'custom', status: 'generating', created_at: '2024-12-10T11:00:00Z', download_url: '' }
+        { 
+          report_id: 100, 
+          title: '自定义报告 - 北京朝阳海淀', 
+          type: 'custom', 
+          status: 'completed', 
+          created_at: '2024-12-10T10:00:00Z', 
+          summary: '朝阳区和海淀区2024年房产市场综合分析报告',
+          content: '一、区域概况\n朝阳区和海淀区是北京最核心的两个区域，房产市场活跃度高。\n\n二、价格对比\n- 海淀区均价：78,000元/㎡\n- 朝阳区均价：65,000元/㎡\n\n三、成交分析\n两区合计成交量占全市35%，其中海淀学区房需求旺盛。\n\n四、投资建议\n建议关注朝阳望京、海淀西北旺等新兴板块。',
+          highlights: ['海淀均价78000元/㎡', '朝阳成交量领先', '学区房需求旺盛'],
+          author: '系统生成'
+        },
+        { 
+          report_id: 99, 
+          title: '自定义报告 - 上海浦东', 
+          type: 'custom', 
+          status: 'generating', 
+          created_at: '2024-12-10T11:00:00Z', 
+          summary: '报告生成中...',
+          content: '',
+          highlights: [],
+          author: ''
+        }
       ]
     }
   },
@@ -496,7 +516,6 @@ const MockData = {
       version: '1.0.0',
       features: {
         ai_chat: true,
-        report_download: true,
         vip_required_features: ['custom_report', 'data_export']
       },
       contact: {

@@ -375,3 +375,238 @@
   }
 }
 
+/* ============================================
+   报告详情模态框
+   ============================================ */
+
+.report-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+}
+
+.report-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.report-modal-content {
+  position: relative;
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.report-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+}
+
+.report-modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.report-modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.report-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.report-modal-meta {
+  display: flex;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--bg-secondary);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.report-modal-meta span {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.report-modal-meta i {
+  width: 16px;
+  height: 16px;
+}
+
+.report-summary {
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: rgba(5, 150, 105, 0.1);
+  border-left: 4px solid var(--primary-color);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.report-highlights {
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.report-highlights h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  color: var(--primary-color);
+}
+
+.report-highlights ul {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+}
+
+.report-highlights li {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.report-highlights li::marker {
+  color: var(--primary-color);
+}
+
+.report-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+.report-content p {
+  margin-bottom: var(--spacing-md);
+}
+
+.report-modal-footer {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.report-modal-footer .btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.report-modal-footer .btn i {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================
+   我的报告列表样式
+   ============================================ */
+
+.my-report-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.my-report-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.my-report-item:last-child {
+  border-bottom: none;
+}
+
+.my-report-item.completed:hover {
+  background: var(--bg-secondary);
+}
+
+.my-report-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.my-report-title {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.my-report-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.my-report-status {
+  font-size: 0.75rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+}
+
+.my-report-status.completed {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.my-report-status.generating {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+

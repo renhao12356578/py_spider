@@ -37,6 +37,9 @@ function updateUserDisplay() {
  * 初始化页面
  */
 async function initPage() {
+  // 加载系统配置
+  await loadSystemConfig();
+  
   // 初始化图表
   initCharts();
   
@@ -48,6 +51,31 @@ async function initPage() {
     loadProvinces(),
     loadTrendData()
   ]);
+}
+
+/**
+ * 加载系统配置
+ */
+async function loadSystemConfig() {
+  try {
+    const config = await API.system.getConfig();
+    
+    // 存储配置供其他模块使用
+    window.appConfig = config;
+    
+    // 可以根据配置显示/隐藏功能
+    if (config.features) {
+      // 例如：根据配置控制 AI 聊天功能
+      if (!config.features.ai_chat) {
+        document.querySelector('[href="beijing.html"]')?.classList.add('disabled');
+      }
+    }
+    
+    console.log('系统配置加载完成:', config);
+  } catch (error) {
+    console.error('加载系统配置失败:', error);
+    // 配置加载失败不影响主流程
+  }
 }
 
 /**
@@ -203,21 +231,87 @@ function renderRankingList(ranking, type) {
         <div class="ranking-value">
           <div class="ranking-price">${valueDisplay}</div>
         </div>
+        <button class="follow-btn" data-city="${item.city_name}" title="关注城市">
+          <i data-lucide="star"></i>
+        </button>
       </div>
     `;
   });
   
   rankingList.innerHTML = html;
+  lucide.createIcons();
   
   // 绑定点击事件
   rankingList.querySelectorAll('.ranking-item').forEach(item => {
-    item.addEventListener('click', function() {
+    item.addEventListener('click', function(e) {
+      // 如果点击的是关注按钮，不跳转
+      if (e.target.closest('.follow-btn')) return;
+      
       const city = this.dataset.city;
       if (city === '北京') {
         window.location.href = 'beijing.html';
       }
     });
   });
+  
+  // 绑定关注按钮事件
+  rankingList.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation();
+      const cityName = this.dataset.city;
+      
+      try {
+        if (this.classList.contains('active')) {
+          // 取消关注
+          await API.favorites.removeCity(cityName);
+          this.classList.remove('active');
+          showToast(`已取消关注 ${cityName}`, 'info');
+        } else {
+          // 添加关注
+          await API.favorites.addCity(cityName);
+          this.classList.add('active');
+          showToast(`已关注 ${cityName}`, 'success');
+        }
+      } catch (error) {
+        console.error('关注操作失败:', error);
+        showToast(error.message || '操作失败，请重试', 'error');
+      }
+    });
+  });
+}
+
+/**
+ * 显示提示消息
+ */
+function showToast(message, type = 'info') {
+  // 移除已存在的 toast
+  const existingToast = document.querySelector('.toast-message');
+  if (existingToast) existingToast.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = `toast-message toast-${type}`;
+  
+  const icons = {
+    success: '✓',
+    error: '✕',
+    info: 'ℹ'
+  };
+  
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || icons.info}</span>
+    <span class="toast-text">${message}</span>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // 动画显示
+  setTimeout(() => toast.classList.add('show'), 10);
+  
+  // 3秒后自动消失
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
 }
 
 /**

@@ -48,10 +48,18 @@ const Auth = {
   /**
    * 退出登录
    */
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = 'login.html';
+  async logout() {
+    try {
+      // 调用退出登录 API
+      await API.auth.logout();
+    } catch (error) {
+      console.error('退出登录 API 调用失败:', error);
+    } finally {
+      // 无论 API 是否成功，都清除本地存储
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = 'login.html';
+    }
   },
   
   /**

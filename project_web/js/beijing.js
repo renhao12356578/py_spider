@@ -468,12 +468,74 @@ function renderHouseList(houses) {
           <div class="house-total-price">${house.total_price?.toFixed(0) || '-'}<span>万</span></div>
           <div class="house-unit-price">${house.price_per_sqm?.toLocaleString() || '-'}元/㎡</div>
         </div>
+        <button class="favorite-btn" data-house-id="${house.house_id}" title="收藏">
+          <i data-lucide="heart"></i>
+        </button>
       </div>
     `;
   });
   
   container.innerHTML = html;
   lucide.createIcons();
+  
+  // 绑定收藏按钮事件
+  container.querySelectorAll('.favorite-btn').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation();
+      const houseId = this.dataset.houseId;
+      
+      try {
+        if (this.classList.contains('active')) {
+          // 取消收藏
+          await API.favorites.removeHouse(houseId);
+          this.classList.remove('active');
+          showToast('已取消收藏', 'info');
+        } else {
+          // 添加收藏
+          await API.favorites.addHouse(houseId);
+          this.classList.add('active');
+          showToast('收藏成功！', 'success');
+        }
+      } catch (error) {
+        console.error('收藏操作失败:', error);
+        showToast(error.message || '操作失败，请重试', 'error');
+      }
+    });
+  });
+}
+
+/**
+ * 显示提示消息
+ */
+function showToast(message, type = 'info') {
+  // 移除已存在的 toast
+  const existingToast = document.querySelector('.toast-message');
+  if (existingToast) existingToast.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = `toast-message toast-${type}`;
+  
+  const icons = {
+    success: '✓',
+    error: '✕',
+    info: 'ℹ'
+  };
+  
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || icons.info}</span>
+    <span class="toast-text">${message}</span>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // 动画显示
+  setTimeout(() => toast.classList.add('show'), 10);
+  
+  // 3秒后自动消失
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
 }
 
 /**

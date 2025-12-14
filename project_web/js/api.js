@@ -2,7 +2,6 @@
  * API 请求封装模块
  * 房产数据分析系统
  */
-
 const API = {
   // 基础配置
   BASE_URL: 'http://localhost:5000/api',
@@ -11,7 +10,7 @@ const API = {
   MOCK_MODE: false,
   
   // 模拟延迟（毫秒）- 模拟网络请求延迟
-  MOCK_DELAY: 300,
+  MOCK_DELAY:0,
   
   /**
    * 模拟延迟
@@ -470,20 +469,6 @@ const API = {
     },
     
     /**
-     * 上传头像
-     * POST /api/user/avatar
-     */
-    uploadAvatar(file) {
-      const formData = new FormData();
-      formData.append('avatar', file);
-      return API.request('/user/avatar', {
-        method: 'POST',
-        headers: {}, // 移除 Content-Type，让浏览器自动设置
-        body: formData
-      });
-    },
-    
-    /**
      * 获取通知设置
      * GET /api/user/notifications/settings
      */
@@ -630,14 +615,6 @@ const API = {
      */
     generate(params) {
       return API.post('/reports/generate', params);
-    },
-    
-    /**
-     * 下载报告
-     * GET /api/reports/:id/download
-     */
-    getDownloadUrl(reportId, format = 'pdf') {
-      return `${API.BASE_URL}/reports/${reportId}/download?format=${format}&token=${localStorage.getItem('token')}`;
     },
     
     /**

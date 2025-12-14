@@ -164,23 +164,49 @@ document.addEventListener('DOMContentLoaded', function() {
     return strength >= 2;
   }
   
-  // 用户名实时验证
-  usernameInput?.addEventListener('input', function() {
+  // 用户名实时验证（带防抖）
+  let usernameCheckTimer = null;
+  usernameInput?.addEventListener('input', async function() {
     const status = document.getElementById('usernameStatus');
     const hint = document.getElementById('usernameHint');
+    const value = this.value;
     
-    if (this.value.length === 0) {
+    // 清除之前的定时器
+    if (usernameCheckTimer) clearTimeout(usernameCheckTimer);
+    
+    if (value.length === 0) {
       status.className = 'input-status';
       hint.textContent = '';
       hint.className = 'form-hint';
-    } else if (validateUsername(this.value)) {
-      status.className = 'input-status valid';
-      hint.textContent = '用户名可用';
-      hint.className = 'form-hint success';
-    } else {
+    } else if (!validateUsername(value)) {
       status.className = 'input-status invalid';
       hint.textContent = '4-16位字母、数字或下划线';
       hint.className = 'form-hint error';
+    } else {
+      // 格式正确，检查是否可用（防抖500ms）
+      status.className = 'input-status';
+      hint.textContent = '检查中...';
+      hint.className = 'form-hint';
+      
+      usernameCheckTimer = setTimeout(async () => {
+        try {
+          const result = await API.auth.checkUsername(value);
+          if (result.available) {
+            status.className = 'input-status valid';
+            hint.textContent = '用户名可用';
+            hint.className = 'form-hint success';
+          } else {
+            status.className = 'input-status invalid';
+            hint.textContent = '用户名已被使用';
+            hint.className = 'form-hint error';
+          }
+        } catch (error) {
+          // API 失败时仅做本地验证
+          status.className = 'input-status valid';
+          hint.textContent = '用户名格式正确';
+          hint.className = 'form-hint success';
+        }
+      }, 500);
     }
   });
   
@@ -208,9 +234,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+  // 手机号实时验证（带防抖）
+  let phoneCheckTimer = null;
+  phoneInput?.addEventListener('input', async function() {
+    const value = this.value;
+    
+    if (phoneCheckTimer) clearTimeout(phoneCheckTimer);
+    
+    if (value.length === 11 && validatePhone(value)) {
+      phoneCheckTimer = setTimeout(async () => {
+        try {
+          const result = await API.auth.checkPhone(value);
+          if (result.registered) {
+            showError('该手机号已注册，请直接登录');
+          }
+        } catch (error) {
+          // 忽略API错误
+        }
+      }, 500);
+    }
+  });
+  
   // 发送验证码
   let countdown = 0;
-  sendCaptchaBtn?.addEventListener('click', function() {
+  sendCaptchaBtn?.addEventListener('click', async function() {
     if (countdown > 0) return;
     
     if (!validatePhone(phoneInput.value)) {
@@ -218,23 +265,35 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // 模拟发送验证码
-    countdown = 60;
+    // 禁用按钮
     this.disabled = true;
-    this.textContent = `${countdown}s 后重发`;
+    this.textContent = '发送中...';
     
-    const timer = setInterval(() => {
-      countdown--;
-      if (countdown <= 0) {
-        clearInterval(timer);
-        this.disabled = false;
-        this.textContent = '获取验证码';
-      } else {
-        this.textContent = `${countdown}s 后重发`;
-      }
-    }, 1000);
-    
-    hideError();
+    try {
+      // 调用发送验证码 API
+      await API.auth.sendCaptcha(phoneInput.value, 'register');
+      
+      // 开始倒计时
+      countdown = 60;
+      this.textContent = `${countdown}s 后重发`;
+      
+      const timer = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(timer);
+          this.disabled = false;
+          this.textContent = '获取验证码';
+        } else {
+          this.textContent = `${countdown}s 后重发`;
+        }
+      }, 1000);
+      
+      hideError();
+    } catch (error) {
+      this.disabled = false;
+      this.textContent = '获取验证码';
+      showError(error.message || '验证码发送失败，请稍后重试');
+    }
   });
   
   // 步骤1验证
@@ -330,8 +389,14 @@ document.addEventListener('DOMContentLoaded', function() {
     submitBtn.innerHTML = '<div class="btn-spinner"></div><span>注册中...</span>';
     
     try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 调用注册 API
+      const result = await API.auth.register({
+        username: usernameInput.value.trim(),
+        phone: phoneInput.value.trim(),
+        email: emailInput.value.trim() || undefined,
+        password: passwordInput.value,
+        captcha: captchaInput.value.trim()
+      });
       
       // 显示成功提示
       registerSuccess.classList.remove('hidden');

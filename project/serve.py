@@ -611,9 +611,6 @@ def internal_error(error):
         'message': '服务器内部错误'
     }), 500
 
-@app.route('/')
-def home():
-    return jsonify({"message": "Flask start successful"})
 
 if __name__ == '__main__':
     # 启动时加载所有历史会话
