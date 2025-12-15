@@ -4,11 +4,11 @@
  */
 const API = {
   // 基础配置
-  BASE_URL: 'http://localhost:5000/api',
-  
+  BASE_URL: 'http://127.0.0.1:5000/api',
+
   // 模拟模式开关 - 设为 true 使用模拟数据，false 请求真实后端
   MOCK_MODE: false,
-  
+
   // 模拟延迟（毫秒）- 模拟网络请求延迟
   MOCK_DELAY:0,
   
@@ -35,9 +35,9 @@ const API = {
         return mockData;
       }
     }
-    
+
     const token = localStorage.getItem('token');
-    
+
     const config = {
       headers: {
         'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ const API = {
       return data.data;
     } catch (error) {
       console.error('API Error:', error);
-      
+      /*
       // 后端不可用时，尝试使用模拟数据
       if (error.message === 'Failed to fetch') {
         const mockData = this.getMockData(endpoint, options);
@@ -75,7 +75,7 @@ const API = {
           return mockData;
         }
       }
-      
+      */
       throw error;
     }
   },
@@ -576,6 +576,7 @@ const API = {
      * 取消报告收藏
      * DELETE /api/favorites/reports/:id
      */
+     
     removeReport(reportId) {
       return API.request(`/favorites/reports/${reportId}`, { method: 'DELETE' });
     }
@@ -674,4 +675,3 @@ const API = {
 
 // 导出
 window.API = API;
-

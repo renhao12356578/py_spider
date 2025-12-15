@@ -1,12 +1,18 @@
-from flask import Flask, request, jsonify,Blueprint,render_template,redirect
+from flask import Flask, send_file, request, jsonify,Blueprint,render_template,redirect
 import uuid
 import re
 import os
 from datetime import datetime
 from pathlib import Path
 from LLM.LLM import recomandation_prompt,get_area_statistics,call_spark_api
-
+from route import router_bp
 app = Flask(__name__,static_folder='../project_web',static_url_path='/project_web')
+
+#注册route.py的蓝图
+app.register_blueprint(router_bp)
+
+# ==========================================
+
 
 # 会话存储目录
 SESSION_DIR = Path(__file__).parent / 'LLM' / 'chat_sessions'
@@ -19,6 +25,7 @@ session_storage = {}
 @app.route('/')
 def index():
     return redirect('/project_web/index.html')
+
 
 def save_session_to_file(session_id):
     """将会话保存到文件"""
@@ -233,6 +240,7 @@ def ai_chat():
     """
     try:
         # 解析请求数据
+
         data = request.get_json()
 
         if not data:
