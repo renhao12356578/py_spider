@@ -3,33 +3,23 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 import json
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.db_config import get_db_connection as get_db_conn
 
 
 class ReportDatabase:
     """报告数据库操作类"""
 
     def __init__(self):
-        self.db_config = {
-            'host': "gateway01.eu-central-1.prod.aws.tidbcloud.com",
-            'port': 4000,
-            'user': "48pvdQxqqjLneBr.root",
-            'password': "o46hvbIhibN3tTPp",
-            'database': "python_project",
-            'ssl_ca': "C:/Users/xijun/tidb-ca.pem",
-            'ssl_verify_cert': True,
-            'ssl_verify_identity': True,
-            'charset': 'utf8mb4',
-            'cursorclass': pymysql.cursors.DictCursor
-        }
+        pass
 
     def get_connection(self):
         """获取数据库连接"""
-        try:
-            connection = pymysql.connect(**self.db_config)
-            return connection
-        except Exception as e:
-            print(f"数据库连接失败: {e}")
-            raise
+        connection = get_db_conn()
+        if not connection:
+            raise Exception("数据库连接失败")
+        return connection
 
     # ============ 报告类型操作 ============
 

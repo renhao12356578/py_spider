@@ -1,28 +1,10 @@
 import pymysql
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
-
-# 数据库配置
-DB_CONFIG = {
-    'host': "gateway01.eu-central-1.prod.aws.tidbcloud.com",
-    'port': 4000,
-    'user': "48pvdQxqqjLneBr.root",
-    'password': "o46hvbIhibN3tTPp",
-    'database': "python_project",
-    'ssl_ca': "C:/Users/xijun/tidb-ca.pem",
-    'ssl_verify_cert': True,
-    'ssl_verify_identity': True
-}
-
-
-def get_db_connection():
-    """获取数据库连接"""
-    try:
-        connection = pymysql.connect(**DB_CONFIG)
-        return connection
-    except Exception as e:
-        print(f"数据库连接失败: {e}")
-        return None
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.db_config import get_db_connection
 
 
 def query_house_data_by_area(area_name: str, limit: int = 20) -> Tuple[List[Dict], List[str]]:
