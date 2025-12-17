@@ -8,7 +8,11 @@ from flask import Flask, redirect
 from pathlib import Path
 
 # 导入所有路由蓝图
-from routes import national_bp, beijing_bp, auth_bp, ai_bp, reports_bp
+from report.report import reports_bp
+from routes import national_bp, beijing_bp, ai_bp
+from blueprints.auth import auth_bp
+from blueprints.user import user_bp
+from blueprints.favorites import favorites_bp
 from routes.ai_routes import load_all_sessions
 
 # 创建Flask应用
@@ -20,7 +24,8 @@ app.register_blueprint(national_bp)  # 全国数据路由: /api/national/*
 app.register_blueprint(beijing_bp)   # 北京数据路由: /api/beijing/*
 app.register_blueprint(ai_bp)        # AI聊天路由: /api/beijing/ai/*
 app.register_blueprint(reports_bp)   # 报告路由: /api/reports/*
-
+app.register_blueprint(user_bp)      # 用户路由: /api/user/*
+app.register_blueprint(favorites_bp) # 收藏路由: /api/favorites/*
 
 @app.route('/')
 def index():

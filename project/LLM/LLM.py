@@ -10,9 +10,12 @@ from time import mktime
 from urllib.parse import urlencode
 from wsgiref.handlers import format_date_time
 import websocket
+from langchain.chains.question_answering.map_reduce_prompt import messages
 from numpy.f2py.auxfuncs import throw_error
-
-from .use_data import query_house_data_by_area,get_area_statistics
+import sys
+import sys
+sys.path.append("..") #相对路径或绝对路径
+from py_spider.project.LLM.use_data import query_house_data_by_area,get_area_statistics
 
 # ================= 配置区域 =================
 appid = "67e25832"
@@ -175,15 +178,15 @@ def prepare_messages():
 
 
 # ================= 主对话函数 =================
-def call_spark_api(user_input):
+def call_spark_api(user_input,max_tokens=2048):
     """调用星火API获取回复"""
     global answer
     answer = ""
 
-    # 准备消息历史
-    messages = prepare_messages()
+    messages=user_input
 
-    # 创建WebSocket连接
+
+    # 5. 创建连接
     wsParam = Ws_Param(appid, api_key, api_secret, Spark_url)
     websocket.enableTrace(False)
     wsUrl = wsParam.create_url()
@@ -194,7 +197,8 @@ def call_spark_api(user_input):
                                 on_close=on_close,
                                 on_open=on_open)
     ws.appid = appid
-    ws.question = messages
+    ws.max_tokens = max_tokens  # 保存最大长度参数
+    ws.question = messages  # 直接使用构建好的 messages
     ws.domain = domain
     ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
 
@@ -333,7 +337,3 @@ def chat_house_price_analysis():
         elif choice == "3":
             break
 
-
-
-if __name__ == "__main__":
-    chat_house_recommandation()

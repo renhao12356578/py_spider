@@ -15,7 +15,6 @@ DB_CONFIG = {
     'ssl_verify_cert': True,
     'ssl_verify_identity': True,
     'charset': 'utf8mb4',
-    'cursorclass': pymysql.cursors.DictCursor
 }
 
 
@@ -84,3 +83,4 @@ def execute_update(query, params=None):
         return None
     finally:
         connection.close()
+get_db_connection()
