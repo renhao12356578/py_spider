@@ -3,7 +3,6 @@ import pymysql
 import hashlib
 import random
 from config.db_config import get_db_connection
-
 # 创建蓝图
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 

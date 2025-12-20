@@ -9,352 +9,13 @@ from pathlib import Path
 import sys
 sys.path.append("..") #相对路径或绝对路径
 from py_spider.project.LLM.LLM import recomandation_prompt, get_area_statistics, call_spark_api
-
-'''ai_bp = Blueprint('ai', __name__, url_prefix='/api/beijing/ai')
-
-# 会话存储目录
-SESSION_DIR = Path(__file__).parent.parent / 'LLM' / 'chat_sessions'
-SESSION_DIR.mkdir(parents=True, exist_ok=True)
-
-# 会话存储（生产环境建议使用Redis等持久化存储）
-session_storage = {}
-
-
-def save_session_to_file(session_id):
-    """将会话保存到文件"""
-    try:
-        if session_id not in session_storage:
-            return
-
-        file_path = SESSION_DIR / f"{session_id}.txt"
-        session_data = session_storage[session_id]
-
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== 会话ID: {session_id} ===\n")
-            f.write(f"创建时间: {session_data.get('created_at', 'N/A')}\n")
-            f.write(f"最后更新: {datetime.now().isoformat()}\n")
-            f.write(f"消息总数: {len(session_data['history'])}\n")
-            f.write("=" * 60 + "\n\n")
-
-            for msg in session_data['history']:
-                role = msg['role']
-                content = msg['content']
-                timestamp = msg.get('timestamp', 'N/A')
-
-                if role == 'system':
-                    f.write(f"[系统提示词] {timestamp}\n")
-                    f.write(f"{content}\n")
-                elif role == 'user':
-                    f.write(f"[用户] {timestamp}\n")
-                    f.write(f"{content}\n")
-                elif role == 'assistant':
-                    f.write(f"[助手] {timestamp}\n")
-                    f.write(f"{content}\n")
-
-                f.write("-" * 60 + "\n\n")
-
-        print(f"✓ 会话 {session_id} 已保存到文件")
-
-    except Exception as e:
-        print(f"✗ 保存会话文件失败: {e}")
-
-
-def load_session_from_file(session_id):
-    """从文件加载会话"""
-    try:
-        file_path = SESSION_DIR / f"{session_id}.txt"
-
-        if not file_path.exists():
-            return None
-
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        history = []
-        current_role = None
-        current_content = []
-        current_timestamp = None
-
-        for line in content.split('\n'):
-            line = line.strip()
-
-            if line.startswith('=') or line.startswith('-') or not line:
-                continue
-
-            if line.startswith('[系统提示词]'):
-                if current_role and current_content:
-                    history.append({
-                        'role': current_role,
-                        'content': '\n'.join(current_content).strip(),
-                        'timestamp': current_timestamp
-                    })
-                current_role = 'system'
-                current_timestamp = line.replace('[系统提示词]', '').strip()
-                current_content = []
-            elif line.startswith('[用户]'):
-                if current_role and current_content:
-                    history.append({
-                        'role': current_role,
-                        'content': '\n'.join(current_content).strip(),
-                        'timestamp': current_timestamp
-                    })
-                current_role = 'user'
-                current_timestamp = line.replace('[用户]', '').strip()
-                current_content = []
-            elif line.startswith('[助手]'):
-                if current_role and current_content:
-                    history.append({
-                        'role': current_role,
-                        'content': '\n'.join(current_content).strip(),
-                        'timestamp': current_timestamp
-                    })
-                current_role = 'assistant'
-                current_timestamp = line.replace('[助手]', '').strip()
-                current_content = []
-            elif line.startswith('创建时间:'):
-                created_at = line.replace('创建时间:', '').strip()
-            else:
-                if current_role:
-                    current_content.append(line)
-
-        if current_role and current_content:
-            history.append({
-                'role': current_role,
-                'content': '\n'.join(current_content).strip(),
-                'timestamp': current_timestamp
-            })
-
-        session_data = {
-            'history': history,
-            'created_at': created_at if 'created_at' in locals() else datetime.now().isoformat()
-        }
-
-        print(f"✓ 从文件加载会话 {session_id}，共 {len(history)} 条消息")
-        return session_data
-
-    except Exception as e:
-        print(f"✗ 加载会话文件失败: {e}")
-        return None
-
-
-def load_all_sessions():
-    """启动时加载所有会话文件"""
-    try:
-        session_files = list(SESSION_DIR.glob("*.txt"))
-        loaded_count = 0
-
-        for file_path in session_files:
-            session_id = file_path.stem
-            session_data = load_session_from_file(session_id)
-
-            if session_data:
-                session_storage[session_id] = session_data
-                loaded_count += 1
-
-        print(f"✓ 启动时加载了 {loaded_count} 个会话")
-
-    except Exception as e:
-        print(f"✗ 加载会话文件失败: {e}")
-
-
-def extract_district_from_message(message):
-    """从用户消息中提取区域信息"""
-    districts = ['东城', '西城', '朝阳', '海淀', '丰台', '石景山',
-                 '通州', '顺义', '昌平', '大兴', '房山', '门头沟',
-                 '平谷', '怀柔', '密云', '延庆']
-
-    for district in districts:
-        if district in message:
-            return district
-    return None
-
-
-def extract_price_from_reply(reply):
-    """从回复中提取价格信息（简单正则匹配）"""
-    pattern = r'(\d{1,3}(?:,\d{3})*|\d+)(?:元|万)'
-    matches = re.findall(pattern, reply)
-
-    if matches:
-        price_str = matches[0].replace(',', '')
-        try:
-            return int(price_str)
-        except:
-            return None
-    return None
-
-
-def get_session_history(session_id):
-    """获取会话历史"""
-    if session_id not in session_storage:
-        loaded_data = load_session_from_file(session_id)
-        if loaded_data:
-            session_storage[session_id] = loaded_data
-        else:
-            session_storage[session_id] = {
-                'history': [],
-                'created_at': datetime.now().isoformat()
-            }
-
-    return session_storage[session_id]['history']
-
-
-def add_to_session(session_id, role, content):
-    """添加消息到会话历史"""
-    history = get_session_history(session_id)
-    history.append({
-        'role': role,
-        'content': content,
-        'timestamp': datetime.now().isoformat()
-    })
-
-    if len(history) > 20:
-        session_storage[session_id]['history'] = history[-20:]
-
-    save_session_to_file(session_id)
-
-
-@ai_bp.route('/chat', methods=['POST'])
-def ai_chat():
-    """北京房产AI聊天接口"""
-    try:
-        data = request.get_json()
-
-        if not data:
-            return jsonify({
-                'code': 400,
-                'message': '请求体不能为空'
-            }), 400
-
-        message = data.get('message', '').strip()
-        session_id = data.get('session_id', '')
-
-        if not message:
-            return jsonify({
-                'code': 400,
-                'message': 'message字段不能为空'
-            }), 400
-
-        if not session_id:
-            session_id = str(uuid.uuid4())
-
-        history = get_session_history(session_id)
-
-        if len(history) == 0:
-            add_to_session(session_id, 'system', recomandation_prompt)
-
-        add_to_session(session_id, 'user', message)
-
-        district = extract_district_from_message(message)
-
-        enhanced_message = message
-        if district and ('均价' in message or '房价' in message or '价格' in message):
-            try:
-                area_stats = get_area_statistics(f"{district}")
-                print("区域数据正确")
-                enhanced_message = f"{message}\n\n参考数据：{area_stats}"
-            except Exception as e:
-                print(f"获取区域统计数据失败: {e}")
-        print(enhanced_message)
-        reply = call_spark_api(enhanced_message)
-
-        if not reply:
-            return jsonify({
-                'code': 500,
-                'message': 'LLM服务暂时不可用，请稍后重试'
-            }), 500
-
-        add_to_session(session_id, 'assistant', reply)
-
-        related_data = {}
-
-        if district:
-            related_data['district'] = district
-
-            avg_price = extract_price_from_reply(reply)
-            if avg_price:
-                related_data['avg_price'] = avg_price
-
-        response = {
-            'code': 200,
-            'data': {
-                'reply': reply,
-                'session_id': session_id,
-                'related_data': related_data if related_data else None
-            }
-        }
-
-        return jsonify(response), 200
-
-    except Exception as e:
-        print(f"处理请求时发生错误: {e}")
-        return jsonify({
-            'code': 500,
-            'message': f'服务器内部错误: {str(e)}'
-        }), 500
-
-
-@ai_bp.route('/chat/history', methods=['GET'])
-def get_chat_history():
-    """获取会话历史记录"""
-    session_id = request.args.get('session_id', '')
-
-    if not session_id:
-        return jsonify({
-            'code': 400,
-            'message': 'session_id参数不能为空'
-        }), 400
-
-    if session_id not in session_storage:
-        return jsonify({
-            'code': 404,
-            'message': '会话不存在或已过期'
-        }), 404
-
-    history = session_storage[session_id]['history']
-    filtered_history = [
-        {
-            'role': msg['role'],
-            'content': msg['content'],
-            'timestamp': msg['timestamp']
-        }
-        for msg in history
-        if msg['role'] != 'system'
-    ]
-
-    return jsonify({
-        'code': 200,
-        'data': {
-            'history': filtered_history,
-            'session_id': session_id,
-            'total_messages': len(filtered_history)
-        }
-    }), 200
-
-
-@ai_bp.route('/sessions/<session_id>', methods=['DELETE'])
-def clear_session(session_id):
-    """清除会话历史"""
-    if session_id in session_storage:
-        del session_storage[session_id]
-
-    try:
-        file_path = SESSION_DIR / f"{session_id}.txt"
-        if file_path.exists():
-            file_path.unlink()
-            print(f"✓ 已删除会话文件: {session_id}")
-    except Exception as e:
-        print(f"✗ 删除会话文件失败: {e}")
-
-    return jsonify({
-        'code': 200,
-        'message': '会话已清除'
-    }), 200'''
+import random
 from flask import Flask, request, jsonify,Blueprint
 from pathlib import Path
 from datetime import datetime
 import uuid
 import re
-from py_spider.project.LLM.use_data import get_area_statistics, query_house_data_by_area, query_house_by_id, get_area_average_price
+from py_spider.project.LLM.use_data import *
 from py_spider.project.LLM.LLM import call_spark_api
 
 # ============================================
@@ -993,62 +654,107 @@ class AIService:
             print(f"✗ 咨询失败: {e}")
             return {'success': False, 'error': str(e)}
 
-    def process_recommendation(self, message, session_id=None):
-        """处理推荐"""
+    def process_recommendation(self, requirements):
+        """处理推荐请求 - 使用数据库直接查询"""
         try:
-            session_id = self.create_or_get_session(session_id, 'recommendation')
+            # 1. 查询符合条件的房源（随机20条）
+            print(f"🔍 查询条件: {requirements}")
+            matched_houses = query_houses_by_requirements(requirements, limit=20)
 
-            # 提取用户需求
-            requirements = extract_requirements_from_message(message)
-            print(f"📋 提取需求: {requirements}")
+            # 2. 统计总匹配数
+            total_matched = count_matched_houses(requirements)
+            print(f"✓ 总匹配数: {total_matched}, 返回: {len(matched_houses)}")
 
-            # 确定查询区域
-            target_district = requirements['district'] or '朝阳'
+            if len(matched_houses) == 0:
+                return {
+                    'success': True,
+                    'recommendations': [],
+                    'total_matched': 0,
+                    'message': '未找到符合条件的房源，建议调整筛选条件'
+                }
 
-            # 查询房源数据
-            print(f"🔍 查询 {target_district} 区房源...")
-            houses = query_house_data_by_area(target_district, limit=100)
-            print(f"✓ 查询到 {len(houses)} 套房源")
+            # 3. 从20条中随机选择3条
+            sample_size = min(3, len(matched_houses))
+            selected_houses = random.sample(matched_houses, sample_size)
 
-            # 格式化房源清单（紧凑格式 + 需求过滤）
-            house_inventory = format_house_inventory_compact(houses, requirements)
-            print(f"📝 格式化后清单长度: {len(house_inventory)} 字符")
+            # 4. 构建推荐结果
+            recommendations = []
+            for house in selected_houses:
+                # 计算简单匹配度（可选）
+                match_score = self.calculate_simple_match_score(house, requirements)
 
-            # 更新系统提示词
-            system_prompt = self.PROMPTS['recommendation'].format(
-                house_inventory=house_inventory
-            )
+                recommendation = {
+                    'house_id': house.get('id') or house.get('house_id'),
+                    'total_price': house.get('total_price'),
+                    'price_per_sqm': house.get('price_per_sqm'),
+                    'area': house.get('area'),
+                    'layout': house.get('layout'),
+                    'district': house.get('region') or house.get('district'),
+                    'match_score': match_score,
+                    'reason': self.generate_recommendation_reason(house)
+                }
+                recommendations.append(recommendation)
 
-            history = get_session_history(session_id)
-            if history and history[0]['role'] == 'system':
-                history[0]['content'] = system_prompt
-            else:
-                history.insert(0, {
-                    'role': 'system',
-                    'content': system_prompt,
-                    'timestamp': datetime.now().isoformat()
-                })
-
-            save_session_to_file(session_id)
-            print(f"✓ 系统提示词已更新，包含房源清单")
-
-            # 调用AI（不需要额外的enhanced_context，房源已在系统提示词中）
-            reply = self.call_ai(session_id, message)
-
-            if not reply:
-                return {'success': False, 'error': 'AI服务不可用'}
+            print(f"✓ 已生成 {len(recommendations)} 条推荐")
 
             return {
                 'success': True,
-                'session_id': session_id,
-                'reply': reply
+                'recommendations': recommendations,
+                'total_matched': total_matched
             }
 
         except Exception as e:
             print(f"✗ 推荐失败: {e}")
             import traceback
             traceback.print_exc()
-            return {'success': False, 'error': str(e)}
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def calculate_simple_match_score(self, house, requirements):
+        """计算简单匹配度（可选）"""
+        score = 85.0  # 基础分
+
+        # 预算越接近中位数，分数越高
+        if requirements.get('budget_min') and requirements.get('budget_max'):
+            budget_mid = (requirements['budget_min'] + requirements['budget_max']) / 2
+            total_price = house.get('total_price', budget_mid)
+            deviation = abs(total_price - budget_mid) / budget_mid
+            score += 10 * (1 - min(deviation, 1))
+
+        # 面积越接近中位数，分数越高
+        if requirements.get('area_min') and requirements.get('area_max'):
+            area_mid = (requirements['area_min'] + requirements['area_max']) / 2
+            area = house.get('area', area_mid)
+            deviation = abs(area - area_mid) / area_mid
+            score += 5 * (1 - min(deviation, 1))
+
+        return round(min(100, score), 1)
+
+    RECOMMENDATION_TEMPLATES = [
+        "该房源{layout}户型设计合理,{area}㎡的面积满足您的需求,总价{total_price}万在预算范围内,性价比突出。",
+        "位于{district}区核心地段,{layout}格局通透,{area}平米空间宽敞,总价{total_price}万元,值得考虑。",
+        "这套{layout}房源面积{area}㎡,总价{total_price}万,单价{price_per_sqm}元/㎡,在{district}区同类房源中具有竞争力。",
+        "{district}区优质房源,{layout}户型方正实用,{area}㎡居住舒适,总价{total_price}万符合您的预算期望。",
+        "推荐这套{layout}的房子,面积{area}平米恰到好处,总价{total_price}万,地段配套成熟,适合居家。",
+        "该房源户型为{layout},{area}㎡空间布局合理,总价{total_price}万元,位于{district}区,交通便利。",
+        "{layout}户型经典实用,{area}平米满足生活所需,总价{total_price}万在您的预算内,值得实地看房。",
+        "这套房子{layout}设计,{area}㎡面积适中,总价{total_price}万,{district}区位置优越,推荐关注。"
+    ]
+    def generate_recommendation_reason(self, house):
+        """生成推荐理由"""
+        template = random.choice(self.RECOMMENDATION_TEMPLATES)
+
+        reason = template.format(
+            layout=house.get('layout', '未知户型'),
+            area=house.get('area', 0),
+            total_price=house.get('total_price', 0),
+            price_per_sqm=house.get('price_per_sqm', 0),
+            district=house.get('region') or house.get('district', '未知区域')
+        )
+
+        return reason
 
     def process_valuation(self, house_id, session_id=None):
         """处理估值请求"""
@@ -1131,29 +837,53 @@ def chat():
 
 @ai_bp.route('/recommend', methods=['POST'])
 def recommend():
-    """房源推荐接口"""
+    """房源推荐接口 - 新版本"""
     data = request.get_json()
     if not data:
         return jsonify({'code': 400, 'message': '请求体不能为空'}), 400
 
-    message = data.get('message', '').strip()
-    if not message:
-        return jsonify({'code': 400, 'message': 'message不能为空'}), 400
+    # 提取并验证参数
+    requirements = {
+        'budget_min': data.get('budget_min'),
+        'budget_max': data.get('budget_max'),
+        'district': data.get('district', '朝阳'),
+        'layout': data.get('layout'),
+        'area_min': data.get('area_min'),
+        'area_max': data.get('area_max'),
+        'floor_pref': data.get('floor_pref')
+    }
 
-    session_id = data.get('session_id', '')
+    # 基本验证
+    if requirements['budget_min'] and requirements['budget_max']:
+        if requirements['budget_min'] > requirements['budget_max']:
+            return jsonify({
+                'code': 400,
+                'message': '最低预算不能大于最高预算'
+            }), 400
 
-    result = ai_service.process_recommendation(message, session_id)
+    if requirements['area_min'] and requirements['area_max']:
+        if requirements['area_min'] > requirements['area_max']:
+            return jsonify({
+                'code': 400,
+                'message': '最小面积不能大于最大面积'
+            }), 400
+
+    # 调用服务处理
+    result = ai_service.process_recommendation(requirements)
 
     if result['success']:
         return jsonify({
             'code': 200,
             'data': {
-                'reply': result['reply'],
-                'session_id': result['session_id']
+                'recommendations': result['recommendations'],
+                'total_matched': result['total_matched']
             }
         }), 200
     else:
-        return jsonify({'code': 500, 'message': result['error']}), 500
+        return jsonify({
+            'code': 500,
+            'message': result.get('error', '推荐失败')
+        }), 500
 
 
 @ai_bp.route('/valuation', methods=['POST'])

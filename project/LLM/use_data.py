@@ -4,7 +4,6 @@ from typing import List, Dict, Optional, Tuple
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config.db_config import get_db_connection
 
 
 def query_house_data_by_area(area_name: str, limit: int = 20) -> Tuple[List[Dict], List[str]]:
@@ -686,4 +685,265 @@ def get_area_statistics(area_name: str) -> Dict:
             connection.close()
         return {}
 
+def count_matched_houses(requirements: dict) -> int:
+    """
+    统计符合条件的房源总数（不限制返回数量）
+    用于返回 total_matched 字段
+    """
+    connection = get_db_connection()
+    if not connection:
+        return 0
 
+    try:
+        cursor = connection.cursor()
+
+        # 构建WHERE条件（与上面相同）
+        conditions = []
+        params = []
+
+        if requirements.get('district'):
+            district = requirements['district']
+            conditions.append("""(
+                region LIKE %s 
+                OR business_area LIKE %s 
+                OR community LIKE %s
+                OR location LIKE %s
+            )""")
+            like_param = f"%{district}%"
+            params.extend([like_param, like_param, like_param, like_param])
+
+        if requirements.get('budget_min') is not None:
+            conditions.append("total_price >= %s")
+            params.append(requirements['budget_min'])
+
+        if requirements.get('budget_max') is not None:
+            conditions.append("total_price <= %s")
+            params.append(requirements['budget_max'])
+
+        if requirements.get('area_min') is not None:
+            conditions.append("area >= %s")
+            params.append(requirements['area_min'])
+
+        if requirements.get('area_max') is not None:
+            conditions.append("area <= %s")
+            params.append(requirements['area_max'])
+
+        if requirements.get('layout'):
+            conditions.append("layout LIKE %s")
+            params.append(f"%{requirements['layout']}%")
+
+        if requirements.get('floor_pref'):
+            floor_pref = requirements['floor_pref']
+            if floor_pref == '中层':
+                conditions.append("(floor LIKE '%中%' OR floor LIKE '%多层%')")
+            elif floor_pref == '高层':
+                conditions.append("floor LIKE '%高%'")
+            elif floor_pref == '低层':
+                conditions.append("floor LIKE '%低%'")
+
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+        query = f"SELECT COUNT(*) as total FROM beijing_house_info WHERE {where_clause}"
+
+        cursor.execute(query, params)
+        result = cursor.fetchone()
+        total = result[0] if result else 0
+
+        cursor.close()
+        connection.close()
+
+        return total
+
+    except Exception as e:
+        print(f"❌ 统计查询失败: {e}")
+        if connection:
+            connection.close()
+        return 0
+
+
+def query_house_data_by_area(area_name: str, limit: int = 20) -> Tuple[List[Dict], List[str]]:
+    """
+    根据区域名称查询房产数据
+    返回: (数据列表, 表头字段名)
+    """
+    connection = get_db_connection()
+    if not connection:
+        return [], []
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+
+        # 首先获取表结构 - 使用SHOW COLUMNS替代DESCRIBE
+        cursor.execute("SHOW COLUMNS FROM beijing_house_info")
+        columns_info = cursor.fetchall()
+
+        # 打印调试信息，查看实际返回的数据结构
+        print(f"🔍 表结构查询结果类型: {type(columns_info)}")
+        if columns_info:
+            print(f"🔍 第一条表结构记录: {columns_info[0]}")
+            print(f"🔍 表结构记录的键: {columns_info[0].keys()}")
+
+        # 从字典中提取字段名
+        column_names = []
+        for col in columns_info:
+            # 尝试不同的键名，因为不同数据库可能有不同的键名
+            if 'Field' in col:
+                column_names.append(col['Field'])
+            elif 'field' in col:
+                column_names.append(col['field'])
+            elif 'COLUMN_NAME' in col:
+                column_names.append(col['COLUMN_NAME'])
+            elif 'column_name' in col:
+                column_names.append(col['column_name'])
+            else:
+                # 如果都不匹配，使用第一个键
+                first_key = list(col.keys())[0]
+                column_names.append(col[first_key])
+
+        print(f"🔍 提取的字段列表: {column_names}")
+
+        # 根据你的数据库结构，我们使用联合查询来搜索多个字段
+        query = f"""
+        SELECT * FROM beijing_house_info 
+        WHERE 
+            region LIKE '%{area_name}%' 
+            OR business_area LIKE '%{area_name}%' 
+            OR community LIKE '%{area_name}%'
+            OR location LIKE '%{area_name}%'
+        ORDER BY RAND()
+        LIMIT {limit}
+        """
+
+        print(f"📝 执行查询: {query[:100]}...")  # 只打印前100个字符
+
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        print(f"✅ 查询结果: 找到 {len(results)} 条数据")
+        if results:
+            print(f"✅ 第一条结果: {results[0]}")
+
+        cursor.close()
+        connection.close()
+        return results, column_names
+
+    except Exception as e:
+        print(f"❌ 查询失败: {e}")
+        import traceback
+        traceback.print_exc()  # 打印详细错误信息
+        if 'cursor' in locals():
+            cursor.close()
+        if connection:
+            connection.close()
+        return [], []
+
+
+def query_houses_by_requirements(requirements: dict, limit: int = 20) -> List[Dict]:
+    """
+    根据用户需求查询符合条件的房源（随机返回）
+
+    Args:
+        requirements: 查询条件字典
+            - budget_min: 最低预算（万元）
+            - budget_max: 最高预算（万元）
+            - district: 区域名称
+            - layout: 户型（如 "2室"）
+            - area_min: 最小面积（平米）
+            - area_max: 最大面积（平米）
+            - floor_pref: 楼层偏好（如 "中层"、"高层"、"低层"）
+        limit: 返回数量限制
+
+    Returns:
+        房源数据列表
+    """
+    connection = get_db_connection()
+    if not connection:
+        return []
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+
+        # 构建WHERE条件
+        conditions = []
+        params = []
+
+        # 1. 区域条件
+        if requirements.get('district'):
+            district = requirements['district']
+            conditions.append("""(
+                region LIKE %s 
+                OR business_area LIKE %s 
+                OR community LIKE %s
+                OR location LIKE %s
+            )""")
+            like_param = f"%{district}%"
+            params.extend([like_param, like_param, like_param, like_param])
+
+        # 2. 预算条件（总价）
+        if requirements.get('budget_min') is not None:
+            conditions.append("total_price >= %s")
+            params.append(requirements['budget_min'])
+
+        if requirements.get('budget_max') is not None:
+            conditions.append("total_price <= %s")
+            params.append(requirements['budget_max'])
+
+        # 3. 面积条件
+        if requirements.get('area_min') is not None:
+            conditions.append("area >= %s")
+            params.append(requirements['area_min'])
+
+        if requirements.get('area_max') is not None:
+            conditions.append("area <= %s")
+            params.append(requirements['area_max'])
+
+        # 4. 户型条件
+        if requirements.get('layout'):
+            conditions.append("layout LIKE %s")
+            params.append(f"%{requirements['layout']}%")
+
+        # 5. 楼层偏好（可选，根据你的数据库字段调整）
+        if requirements.get('floor_pref'):
+            floor_pref = requirements['floor_pref']
+            if floor_pref == '中层':
+                conditions.append("(floor LIKE '%中%' OR floor LIKE '%多层%')")
+            elif floor_pref == '高层':
+                conditions.append("floor LIKE '%高%'")
+            elif floor_pref == '低层':
+                conditions.append("floor LIKE '%低%'")
+
+        # 构建完整SQL
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+        query = f"""
+        SELECT * FROM beijing_house_info 
+        WHERE {where_clause}
+        ORDER BY RAND()
+        LIMIT %s
+        """
+
+        params.append(limit)
+
+        print(f"📝 执行查询SQL:")
+        print(f"   条件数: {len(conditions)}")
+        print(f"   WHERE: {where_clause}")
+        print(f"   参数: {params}")
+
+        # 执行查询
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+
+        print(f"✅ 查询结果: 找到 {len(results)} 条数据")
+
+        cursor.close()
+        connection.close()
+
+        return results
+
+    except Exception as e:
+        print(f"❌ 数据库查询失败: {e}")
+        import traceback
+        traceback.print_exc()
+        if connection:
+            connection.close()
+        return []

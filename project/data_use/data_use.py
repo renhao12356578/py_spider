@@ -25,6 +25,193 @@ def get_db_connection():
         return None
 
 
+def query_houses_by_requirements(requirements: dict, limit: int = 20) -> List[Dict]:
+    """
+    根据用户需求查询符合条件的房源（随机返回）
+
+    Args:
+        requirements: 查询条件字典
+            - budget_min: 最低预算（万元）
+            - budget_max: 最高预算（万元）
+            - district: 区域名称
+            - layout: 户型（如 "2室"）
+            - area_min: 最小面积（平米）
+            - area_max: 最大面积（平米）
+            - floor_pref: 楼层偏好（如 "中层"、"高层"、"低层"）
+        limit: 返回数量限制
+
+    Returns:
+        房源数据列表
+    """
+    connection = get_db_connection()
+    if not connection:
+        return []
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+
+        # 构建WHERE条件
+        conditions = []
+        params = []
+
+        # 1. 区域条件
+        if requirements.get('district'):
+            district = requirements['district']
+            conditions.append("""(
+                region LIKE %s 
+                OR business_area LIKE %s 
+                OR community LIKE %s
+                OR location LIKE %s
+            )""")
+            like_param = f"%{district}%"
+            params.extend([like_param, like_param, like_param, like_param])
+
+        # 2. 预算条件（总价）
+        if requirements.get('budget_min') is not None:
+            conditions.append("total_price >= %s")
+            params.append(requirements['budget_min'])
+
+        if requirements.get('budget_max') is not None:
+            conditions.append("total_price <= %s")
+            params.append(requirements['budget_max'])
+
+        # 3. 面积条件
+        if requirements.get('area_min') is not None:
+            conditions.append("area >= %s")
+            params.append(requirements['area_min'])
+
+        if requirements.get('area_max') is not None:
+            conditions.append("area <= %s")
+            params.append(requirements['area_max'])
+
+        # 4. 户型条件
+        if requirements.get('layout'):
+            conditions.append("layout LIKE %s")
+            params.append(f"%{requirements['layout']}%")
+
+        # 5. 楼层偏好（可选，根据你的数据库字段调整）
+        if requirements.get('floor_pref'):
+            floor_pref = requirements['floor_pref']
+            if floor_pref == '中层':
+                conditions.append("(floor LIKE '%中%' OR floor LIKE '%多层%')")
+            elif floor_pref == '高层':
+                conditions.append("floor LIKE '%高%'")
+            elif floor_pref == '低层':
+                conditions.append("floor LIKE '%低%'")
+
+        # 构建完整SQL
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+        query = f"""
+        SELECT * FROM beijing_house_info 
+        WHERE {where_clause}
+        ORDER BY RAND()
+        LIMIT %s
+        """
+
+        params.append(limit)
+
+        print(f"📝 执行查询SQL:")
+        print(f"   条件数: {len(conditions)}")
+        print(f"   WHERE: {where_clause}")
+        print(f"   参数: {params}")
+
+        # 执行查询
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+
+        print(f"✅ 查询结果: 找到 {len(results)} 条数据")
+
+        cursor.close()
+        connection.close()
+
+        return results
+
+    except Exception as e:
+        print(f"❌ 数据库查询失败: {e}")
+        import traceback
+        traceback.print_exc()
+        if connection:
+            connection.close()
+        return []
+
+
+def count_matched_houses(requirements: dict) -> int:
+    """
+    统计符合条件的房源总数（不限制返回数量）
+    用于返回 total_matched 字段
+    """
+    connection = get_db_connection()
+    if not connection:
+        return 0
+
+    try:
+        cursor = connection.cursor()
+
+        # 构建WHERE条件（与上面相同）
+        conditions = []
+        params = []
+
+        if requirements.get('district'):
+            district = requirements['district']
+            conditions.append("""(
+                region LIKE %s 
+                OR business_area LIKE %s 
+                OR community LIKE %s
+                OR location LIKE %s
+            )""")
+            like_param = f"%{district}%"
+            params.extend([like_param, like_param, like_param, like_param])
+
+        if requirements.get('budget_min') is not None:
+            conditions.append("total_price >= %s")
+            params.append(requirements['budget_min'])
+
+        if requirements.get('budget_max') is not None:
+            conditions.append("total_price <= %s")
+            params.append(requirements['budget_max'])
+
+        if requirements.get('area_min') is not None:
+            conditions.append("area >= %s")
+            params.append(requirements['area_min'])
+
+        if requirements.get('area_max') is not None:
+            conditions.append("area <= %s")
+            params.append(requirements['area_max'])
+
+        if requirements.get('layout'):
+            conditions.append("layout LIKE %s")
+            params.append(f"%{requirements['layout']}%")
+
+        if requirements.get('floor_pref'):
+            floor_pref = requirements['floor_pref']
+            if floor_pref == '中层':
+                conditions.append("(floor LIKE '%中%' OR floor LIKE '%多层%')")
+            elif floor_pref == '高层':
+                conditions.append("floor LIKE '%高%'")
+            elif floor_pref == '低层':
+                conditions.append("floor LIKE '%低%'")
+
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+        query = f"SELECT COUNT(*) as total FROM beijing_house_info WHERE {where_clause}"
+
+        cursor.execute(query, params)
+        result = cursor.fetchone()
+        total = result[0] if result else 0
+
+        cursor.close()
+        connection.close()
+
+        return total
+
+    except Exception as e:
+        print(f"❌ 统计查询失败: {e}")
+        if connection:
+            connection.close()
+        return 0
+
+
 def query_house_data_by_area(area_name: str, limit: int = 20) -> Tuple[List[Dict], List[str]]:
     """
     根据区域名称查询房产数据
