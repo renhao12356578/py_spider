@@ -10,12 +10,11 @@ from time import mktime
 from urllib.parse import urlencode
 from wsgiref.handlers import format_date_time
 import websocket
-from langchain.chains.question_answering.map_reduce_prompt import messages
 from numpy.f2py.auxfuncs import throw_error
 import sys
 import sys
 sys.path.append("..") #相对路径或绝对路径
-from py_spider.project.LLM.use_data import query_house_data_by_area,get_area_statistics
+from LLM.use_data import query_house_data_by_area,get_area_statistics
 
 # ================= 配置区域 =================
 appid = "67e25832"

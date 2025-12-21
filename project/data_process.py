@@ -704,55 +704,64 @@ def analysis_floor() -> str:
 
 def analysis_layout() -> str:
     """
-    实现GET /api/beijing/analysis/layout
-    户型特征分析（按室数分类）
+    北京房产户型特征分析 - 彻底修复重复户型问题，每种户型仅返回一条记录
+    采用子查询先转换户型，再外层分组聚合，避免字段歧义
     """
     connection = get_db_connection()
     if not connection:
-        return json.dumps({"code": 500, "msg": "数据库连接失败"})
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": "数据库连接失败"
+        }, ensure_ascii=False)
 
     try:
         cursor = connection.cursor(pymysql.cursors.DictCursor)
 
+        # 核心修改：子查询先统一户型分类，外层再按统一户型分组聚合
         query = """
-                SELECT CASE \
-                           WHEN layout LIKE '1室%' THEN '1室' \
-                           WHEN layout LIKE '2室%' THEN '2室' \
-                           WHEN layout LIKE '3室%' THEN '3室' \
-                           WHEN layout LIKE '%室%' THEN '4室+' \
-                           ELSE '未知' \
-                           END                      as layout, \
+                SELECT unified_layout               as layout, \
                        ROUND(AVG(price_per_sqm), 0) as avg_price, \
                        ROUND(AVG(total_price), 0)   as avg_total, \
                        COUNT(*) as count
-                FROM beijing_house_info
-                WHERE layout IS NOT NULL AND layout != ''
-                GROUP BY layout
-                ORDER BY
-                    CASE
-                    WHEN layout = '1室' THEN 1
-                    WHEN layout = '2室' THEN 2
-                    WHEN layout = '3室' THEN 3
-                    WHEN layout = '4室+' THEN 4
-                    ELSE 5
-                END \
+                FROM (
+                    -- 子查询：将原始细分户型转换为统一户型（1室/2室/3室/4室+/未知）
+                    SELECT
+                    price_per_sqm, total_price, CASE
+                    WHEN layout REGEXP '^1室' THEN '1室'
+                    WHEN layout REGEXP '^2室' THEN '2室'
+                    WHEN layout REGEXP '^3室' THEN '3室'
+                    WHEN layout REGEXP '^4室|^5室|^6室' THEN '4室+'
+                    ELSE '未知'
+                    END as unified_layout
+                    FROM beijing_house_info
+                    WHERE layout IS NOT NULL
+                    ) as converted_houses
+                -- 外层按统一户型分组，确保每种户型仅一条记录
+                GROUP BY unified_layout
+                -- 按记录数降序排序，便于前端展示
+                ORDER BY count DESC \
                 """
-        cursor.execute(query)
-        results = cursor.fetchall()
 
-        # 格式化结果
+        cursor.execute(query)
+        layout_stats = cursor.fetchall()
+
+        # 格式化结果（确保字段类型统一，无冗余数据）
         layout_analysis = []
-        for item in results:
+        for stats in layout_stats:
             layout_analysis.append({
-                "layout": item['layout'],
-                "avg_price": int(item['avg_price']) if item['avg_price'] else 0,
-                "avg_total": int(item['avg_total']) if item['avg_total'] else 0,
-                "count": item['count']
+                "layout": stats['layout'],
+                "avg_price": int(stats['avg_price']) if stats['avg_price'] else 0,
+                "avg_total": int(stats['avg_total']) if stats['avg_total'] else 0,
+                "count": int(stats['count']) if stats['count'] else 0
             })
 
         response = {
             "code": 200,
-            "data": {"layout_analysis": layout_analysis}
+            "data": {
+                "layout_analysis": layout_analysis
+            },
+            "message": "户型特征分析查询成功"
         }
 
         cursor.close()
@@ -760,45 +769,61 @@ def analysis_layout() -> str:
         return json.dumps(response, ensure_ascii=False)
 
     except Exception as e:
-        print(f"户型分析查询失败: {e}")
-        return json.dumps({"code": 500, "msg": f"查询失败: {str(e)}"})
+        print(f"户型特征分析查询失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": f"户型特征分析异常: {str(e)}"
+        }, ensure_ascii=False)
 
 
 def analysis_orientation() -> str:
     """
-    实现GET /api/beijing/analysis/orientation
-    朝向特征分析
+    北京房产朝向特征分析 - 仅保留1-2个汉字的朝向数据，过滤超长朝向
     """
     connection = get_db_connection()
     if not connection:
-        return json.dumps({"code": 500, "msg": "数据库连接失败"})
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": "数据库连接失败"
+        }, ensure_ascii=False)
 
     try:
         cursor = connection.cursor(pymysql.cursors.DictCursor)
 
+        # 核心修改：1. 先分组聚合 2. 筛选CHAR_LENGTH(orientation) <= 2 3. 过滤空字符串
         query = """
-                SELECT IFNULL(orientation, '未知')  as orientation, \
+                SELECT orientation, \
                        ROUND(AVG(price_per_sqm), 0) as avg_price, \
                        COUNT(*) as count
                 FROM beijing_house_info
-                GROUP BY IFNULL(orientation, '未知')
-                ORDER BY count DESC \
+                WHERE
+                    orientation IS NOT NULL
+                  AND orientation != ''              -- 过滤空字符串
+                  AND CHAR_LENGTH (orientation) <= 2 -- 仅保留1-2个汉字的朝向
+                GROUP BY orientation -- 确保每种有效朝向仅一条记录
+                ORDER BY count DESC -- 按房源数量降序排序 \
                 """
+
         cursor.execute(query)
-        results = cursor.fetchall()
+        orientation_stats = cursor.fetchall()
 
         # 格式化结果
         orientation_analysis = []
-        for item in results:
+        for stats in orientation_stats:
             orientation_analysis.append({
-                "orientation": item['orientation'],
-                "avg_price": int(item['avg_price']) if item['avg_price'] else 0,
-                "count": item['count']
+                "orientation": stats['orientation'],
+                "avg_price": int(stats['avg_price']) if stats['avg_price'] else 0,
+                "count": int(stats['count']) if stats['count'] else 0
             })
 
         response = {
             "code": 200,
-            "data": {"orientation_analysis": orientation_analysis}
+            "data": {
+                "orientation_analysis": orientation_analysis
+            },
+            "message": "朝向特征分析查询成功（仅保留1-2个汉字的朝向）"
         }
 
         cursor.close()
@@ -806,9 +831,12 @@ def analysis_orientation() -> str:
         return json.dumps(response, ensure_ascii=False)
 
     except Exception as e:
-        print(f"朝向分析查询失败: {e}")
-        return json.dumps({"code": 500, "msg": f"查询失败: {str(e)}"})
-
+        print(f"朝向特征分析查询失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": f"朝向特征分析异常: {str(e)}"
+        }, ensure_ascii=False)
 
 def analysis_elevator() -> str:
     """
