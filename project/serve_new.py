@@ -10,9 +10,9 @@ from pathlib import Path
 # 导入所有路由蓝图
 from report.report import reports_bp
 from routes import national_bp, beijing_bp, ai_bp
-from blueprints.auth import auth_bp
-from blueprints.user import user_bp
-from blueprints.favorites import favorites_bp
+from auth import auth_bp
+from user import user_bp
+from favorites import favorites_bp
 from routes.ai_routes import load_all_sessions
 
 # 创建Flask应用

@@ -72,3 +72,28 @@ def get_boxplot_data():
     district = request.args.get('district', '')
     result = dp.get_boxplot_data(district)
     return jsonify(json.loads(result))
+
+@beijing_bp.route('/houses', methods=['GET'])
+def query_houses_list():
+    """北京数据模块 - 房源列表查询"""
+    # 提取所有筛选参数
+    district = request.args.get('district')
+    layout = request.args.get('layout')
+    min_price = request.args.get('min_price', type=int)
+    max_price = request.args.get('max_price', type=int)
+    min_area = request.args.get('min_area', type=int)
+    max_area = request.args.get('max_area', type=int)
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('page_size', 20, type=int)
+
+    result = dp.query_houses_list(
+        district=district,
+        layout=layout,
+        min_price=min_price,
+        max_price=max_price,
+        min_area=min_area,
+        max_area=max_area,
+        page=page,
+        page_size=page_size
+    )
+    return jsonify(json.loads(result))
