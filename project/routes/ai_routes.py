@@ -8,15 +8,15 @@ from datetime import datetime
 from pathlib import Path
 import sys
 sys.path.append("..") #相对路径或绝对路径
-from py_spider.project.LLM.LLM import recomandation_prompt, get_area_statistics, call_spark_api
+from LLM.LLM import recomandation_prompt, get_area_statistics, call_spark_api
 import random
 from flask import Flask, request, jsonify,Blueprint
 from pathlib import Path
 from datetime import datetime
 import uuid
 import re
-from py_spider.project.LLM.use_data import *
-from py_spider.project.LLM.LLM import call_spark_api
+from LLM.use_data import *
+from LLM.LLM import call_spark_api
 
 # ============================================
 # Flask应用初始化

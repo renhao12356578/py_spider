@@ -24,17 +24,46 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import sys
 sys.path.append("..") #相对路径或绝对路径
-from py_spider.project.LLM.use_data import get_area_statistics
+from LLM.use_data import get_area_statistics
 from .reportDB import ReportDatabase
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/api')
 db = ReportDatabase()
 
-
+from functools import wraps
+def require_auth(f):
+    """认证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # 从请求头获取token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({
+                'code': 401,
+                'message': '未提供认证令牌',
+                'data': None
+            }), 401
+        
+        # 提取token（去掉Bearer前缀）
+        token = auth_header.replace('Bearer ', '').strip()
+        
+        try:
+            user_id = int(token)
+        except:
+            return jsonify({
+                'code': 401,
+                'message': '无效的认证令牌',
+                'data': None
+            }), 401
+        
+        # 将user_id添加到请求上下文中
+        request.user_id = user_id
+        return f(*args, **kwargs)
+    return decorated_function
 # ============ AI生成报告 ============
 
 @reports_bp.route('/reports/generate/ai', methods=['POST'])
-@jwt_required()
+@require_auth
 def generate_ai_report():
     """
     使用AI生成区域分析报告
@@ -87,7 +116,7 @@ def generate_ai_report():
 
 
 @reports_bp.route('/reports/format', methods=['POST'])
-@jwt_required()
+@require_auth
 def format_report():
     """
     格式化报告内容
@@ -167,7 +196,7 @@ def get_area_statistics_api():
         }), 500
 
 @reports_bp.route('/reports/<int:report_id>/generate-image', methods=['POST'])
-@jwt_required()
+@require_auth
 def generate_content_image(report_id):
     """
     为报告内容实时生成图片
@@ -252,7 +281,7 @@ def generate_content_image(report_id):
 # ============ 创建报告（增强版） ============
 
 @reports_bp.route('/reports/create', methods=['POST'])
-@jwt_required()
+@require_auth
 def create_report():
     """
     创建报告（支持AI生成图片）
@@ -315,7 +344,7 @@ def create_report():
 # ============ 获取内容历史 ============
 
 @reports_bp.route('/reports/<int:report_id>/history', methods=['GET'])
-@jwt_required()
+@require_auth
 def get_content_history(report_id):
     """
     获取报告内容修改历史
@@ -342,7 +371,7 @@ def get_content_history(report_id):
 # ============ AI生成报告草稿 ============
 
 @reports_bp.route('/reports/generate-draft', methods=['POST'])
-@jwt_required()
+@require_auth
 def generate_report_draft():
     """
     AI生成报告草稿
@@ -525,7 +554,7 @@ def get_report_detail(report_id):
 
 
 @reports_bp.route('/reports/<int:report_id>', methods=['PUT'])
-@jwt_required()
+@require_auth
 def update_report(report_id):
     """
     更新报告
@@ -595,7 +624,7 @@ def update_report(report_id):
 # ============ 删除报告 ============
 
 @reports_bp.route('/reports/<int:report_id>', methods=['DELETE'])
-@jwt_required()
+@require_auth
 def delete_report(report_id):
     """
     删除报告（软删除）
