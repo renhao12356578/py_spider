@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 北京数据相关路由
 """
@@ -98,7 +97,6 @@ def query_houses_list():
         page_size=page_size
     )
     return jsonify(json.loads(result))
-=======
 """
 北京数据相关路由
 """
@@ -198,4 +196,3 @@ def query_houses_list():
         page_size=page_size
     )
     return jsonify(json.loads(result))
->>>>>>> 29b802958965e9393b3458e4f8f066eec94c8b92

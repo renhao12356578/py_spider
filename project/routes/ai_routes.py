@@ -984,5 +984,87 @@ def list_sessions():
         return jsonify({'code': 500, 'message': str(e)}), 500
 
 
-# 注册蓝图
+# 注册蓝图（将在文件末尾统一注册，确保所有路由已定义）
+
+
+
+@ai_bp.route('/value/<city>', methods=['GET'])
+def value_report(city):
+    """基于 `summary_all.csv` 和 `predictions_all.csv` 中指定城市的 detail 撰写报告并返回"""
+    try:
+        import csv, json
+
+        base = Path(__file__).parent
+        summary_path = base / 'summary_all.csv'
+        pred_path = base / 'predictions_all.csv'
+
+        # 读取 summary
+        summary = None
+        if summary_path.exists():
+            with open(summary_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row.get('city') == city:
+                        summary = row
+                        break
+
+        if not summary:
+            return jsonify({'code': 404, 'message': f'城市 {city} 未在 summary_all 中找到'}), 404
+
+        # Debugging: Print all city names in summary_all.csv
+        print("Cities in summary_all.csv:")
+        with open(summary_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                print(row.get('city'))
+
+        # Reset file pointer for actual processing
+        f.seek(0)
+
+        # 读取 predictions，收集该城市的多条预测并按日期降序
+        preds = []
+        if pred_path.exists():
+            with open(pred_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row.get('city') == city:
+                        preds.append(row)
+
+        # 按 date 降序并取最近 6 条
+        try:
+            preds_sorted = sorted(preds, key=lambda r: r.get('date', ''), reverse=True)
+        except Exception:
+            preds_sorted = preds
+
+        selected = preds_sorted[:6]
+
+        pred_texts = []
+        for r in selected:
+            detail = r.get('detail', '')
+            # 尝试解析 JSON detail，失败则原样使用
+            try:
+                parsed = json.loads(detail)
+                detail_str = json.dumps(parsed, ensure_ascii=False)
+            except Exception:
+                detail_str = detail
+
+            pred_texts.append(f"{r.get('date','')},{r.get('method','')},{r.get('predicted_price','')} - {detail_str}")
+
+        # 构造 prompt
+        prompt = "城市摘要:\n" + json.dumps(summary, ensure_ascii=False) + "\n\n预测细节(最近几条):\n" + "\n".join(pred_texts)
+
+        # 调用 AIService 生成报告
+        ai = AIService()
+        user_message = "请基于以上摘要与预测细节，撰写一份专业的市场报告（约200字），包含现状、趋势判断和建议："
+        report = ai.call_ai(None, user_message, prompt)
+
+        if not report:
+            return jsonify({'code': 500, 'message': 'AI 未返回内容'}), 500
+
+        return jsonify({'code': 200, 'city': city, 'report': report}), 200
+
+    except Exception as e:
+        return jsonify({'code': 500, 'message': str(e)}), 500
+
+# 在文件末尾统一注册 ai_bp
 app.register_blueprint(ai_bp)
