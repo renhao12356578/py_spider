@@ -74,17 +74,6 @@ async function loadOverviewData() {
   }
 }
 
-/**
- * 初始化区域图表
- */
-function initDistrictCharts() {
-  // ❌ 移除这里的初始化逻辑，改为在 loadDistrictData 中按需初始化
-  // const mapContainer = document.getElementById('districtMap');
-  // if (mapContainer) {
-  //   districtMapChart = echarts.init(mapContainer);
-  //   window.addEventListener('resize', () => districtMapChart?.resize());
-  // }
-}
 
 /**
  * 加载区域数据
@@ -421,332 +410,324 @@ async function loadAnalysisData() {
 }
 
 /**
- * 初始化数据图表 - 移除错误的初始化逻辑
+ * 加载散点图 - 独立函数
  */
-function initDataCharts() {
-  // ❌ 删除这个函数的内容,改为在 loadChartData 中直接处理
-  // 散点图需要支持区域切换,不能使用 dataset.initialized 标记
+async function loadScatterChart(district = '') {
+  const scatterContainer = document.getElementById('scatterChart');
+  if (!scatterContainer) return;
+  
+  try {
+    // 先销毁旧实例
+    if (scatterChart) {
+      scatterChart.dispose();
+      scatterChart = null;
+    }
+    
+    // 显示加载动画
+    scatterContainer.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
+    
+    // 请求数据
+    const params = district ? { district } : { limit: 500 };
+    console.log('📊 散点图请求参数:', params);
+    
+    const scatterData = await API.beijing.getScatterData(params);
+    console.log('✅ 散点图数据加载成功，数据点数量:', scatterData.points?.length || 0);
+    
+    // 按区域分组数据
+    const districtGroups = {};
+    (scatterData.points || []).forEach(p => {
+      const area = parseFloat(p.area) || 0;
+      const totalPrice = parseFloat(p.total_price) || 0;
+      const districtName = p.district || p.region || '未知区域';
+      const layout = p.layout || '未知户型';
+      
+      if (!districtGroups[districtName]) {
+        districtGroups[districtName] = [];
+      }
+      
+      districtGroups[districtName].push([area, totalPrice, `${districtName} - ${layout}`]);
+    });
+    
+    console.log('🎨 数据分组结果:', Object.keys(districtGroups).map(k => `${k}(${districtGroups[k].length})`));
+    
+    // 数据验证
+    if (Object.keys(districtGroups).length === 0) {
+      scatterContainer.innerHTML = `
+        <div class="chart-error">
+          <i data-lucide="inbox"></i>
+          <p>暂无${district ? district + '区' : ''}散点图数据</p>
+        </div>
+      `;
+      lucide.createIcons();
+      return;
+    }
+    
+    // 定义区域颜色映射
+    const districtColors = {
+      '东城': '#FF6B6B', '西城': '#4ECDC4', '朝阳': '#45B7D1', '海淀': '#96CEB4',
+      '丰台': '#FFEAA7', '石景山': '#DFE6E9', '门头沟': '#A29BFE', '房山': '#FD79A8',
+      '通州': '#FDCB6E', '顺义': '#6C5CE7', '昌平': '#00B894', '大兴': '#E17055',
+      '怀柔': '#74B9FF', '平谷': '#A29BFE', '密云': '#55EFC4', '延庆': '#FAB1A0'
+    };
+    
+    // 清除加载动画后再初始化图表
+    scatterContainer.innerHTML = '';
+    scatterChart = echarts.init(scatterContainer);
+    
+    // 为每个区域创建一个 series
+    const seriesList = Object.entries(districtGroups).map(([districtName, points]) => ({
+      name: districtName,
+      type: 'scatter',
+      symbolSize: 8,
+      data: points,
+      itemStyle: {
+        color: districtColors[districtName] || '#2563eb',
+        opacity: 0.7
+      },
+      emphasis: {
+        itemStyle: {
+          opacity: 1,
+          borderWidth: 2,
+          borderColor: '#fff',
+          shadowBlur: 10,
+          shadowColor: 'rgba(0,0,0,0.3)'
+        }
+      }
+    }));
+    
+    const scatterOption = {
+      title: { 
+        text: district ? `${district} - 面积总价分布` : '全市面积总价分布', 
+        left: 'center',
+        textStyle: { fontSize: 16, fontWeight: 600, color: '#1f2937' }
+      },
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#e5e7eb',
+        borderWidth: 1,
+        padding: [12, 16],
+        textStyle: { color: '#1f2937' },
+        formatter: function(params) {
+          const area = params.value[0] || 0;
+          const totalPrice = params.value[1] || 0;
+          const label = params.value[2] || '房源信息';
+          
+          return `
+            <div style="font-weight: 600; margin-bottom: 8px;">${label}</div>
+            <div style="display: flex; justify-content: space-between; gap: 20px;">
+              <span style="color: #6b7280;">面积:</span>
+              <span style="font-weight: 600;">${area.toFixed(2)}㎡</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 20px;">
+              <span style="color: #6b7280;">总价:</span>
+              <span style="font-weight: 600; color: #ef4444;">${totalPrice.toFixed(0)}万</span>
+            </div>
+          `;
+        }
+      },
+      legend: {
+        type: 'scroll',
+        orient: 'vertical',
+        right: 10,
+        top: 50,
+        bottom: 20,
+        data: Object.keys(districtGroups),
+        textStyle: { fontSize: 12 },
+        pageIconSize: 12,
+        pageTextStyle: { fontSize: 12 }
+      },
+      grid: {
+        left: '10%',
+        right: district ? '4%' : '120px',
+        bottom: '10%',
+        top: '15%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'value',
+        name: '面积(㎡)',
+        nameTextStyle: { color: '#6b7280', fontSize: 12 },
+        axisLabel: { color: '#6b7280' },
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
+      },
+      yAxis: {
+        type: 'value',
+        name: '总价(万)',
+        nameTextStyle: { color: '#6b7280', fontSize: 12 },
+        axisLabel: { color: '#6b7280' },
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
+      },
+      series: seriesList
+    };
+    
+    scatterChart.setOption(scatterOption);
+    console.log('✅ 散点图渲染完成，共', seriesList.length, '个区域');
+    
+  } catch (error) {
+    console.error('❌ 散点图加载失败:', error);
+    scatterContainer.innerHTML = `
+      <div class="chart-error">
+        <i data-lucide="alert-circle"></i>
+        <p>加载散点图失败</p>
+        <p style="font-size:12px;color:#999;margin-top:8px;">
+          ${error.message || '未知错误'}
+        </p>
+      </div>
+    `;
+    lucide.createIcons();
+  }
 }
 
 /**
- * 加载图表数据 - 修复散点图多色显示
+ * 加载箱线图 - 独立函数
  */
-async function loadChartData(district = '') {
-  const scatterContainer = document.getElementById('scatterChart');
+async function loadBoxplotChart() {
   const boxplotContainer = document.getElementById('boxplotChart');
+  if (!boxplotContainer) return;
   
-  // ✅ 1. 加载散点图 (独立 try-catch)
-  if (scatterContainer) {
-    try {
-      // 先销毁旧实例
-      if (scatterChart) {
-        scatterChart.dispose();
-        scatterChart = null;
-      }
-      
-      // 显示加载动画
-      scatterContainer.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-      
-      // ✅ 修复：正确传递参数
-      const params = district ? { district } : { limit: 500 };
-      console.log('📊 散点图请求参数:', params);
-      
-      const scatterData = await API.beijing.getScatterData(params);
-      
-      console.log('✅ 散点图数据加载成功，数据点数量:', scatterData.points?.length || 0);
-      
-      // ✅ 按区域分组数据
-      const districtGroups = {};
-      (scatterData.points || []).forEach(p => {
-        const area = parseFloat(p.area) || 0;
-        const totalPrice = parseFloat(p.total_price) || 0;
-        const districtName = p.district || p.region || '未知区域';
-        const layout = p.layout || '未知户型';
-        
-        if (!districtGroups[districtName]) {
-          districtGroups[districtName] = [];
+  // 如果已经初始化过,直接返回
+  if (boxplotContainer.dataset.initialized === 'true') {
+    console.log('ℹ️ 箱线图已加载,跳过重复加载');
+    return;
+  }
+  
+  try {
+    // 显示加载动画
+    boxplotContainer.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
+    
+    const boxplotData = await API.beijing.getBoxplotData();
+    console.log('✅ 箱线图数据加载成功');
+    
+    // 清除加载动画
+    boxplotContainer.innerHTML = '';
+    
+    // 初始化图表实例
+    if (!boxplotChart) {
+      boxplotChart = echarts.init(boxplotContainer);
+    }
+    
+    // 处理箱线图数据
+    const districts = boxplotData.boxplot || [];
+    const xAxisData = districts.map(d => d.district);
+    const seriesData = districts.map(d => [
+      parseFloat(d.min) || 0, 
+      parseFloat(d.q1) || 0, 
+      parseFloat(d.median) || 0, 
+      parseFloat(d.q3) || 0, 
+      parseFloat(d.max) || 0
+    ]);
+    
+    const boxplotOption = {
+      title: { 
+        text: '各区房价分布箱线图', 
+        left: 'center',
+        textStyle: { fontSize: 16, fontWeight: 600, color: '#1f2937' }
+      },
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#e5e7eb',
+        borderWidth: 1,
+        padding: [12, 16],
+        textStyle: { color: '#1f2937' },
+        formatter: function(params) {
+          const data = params.data;
+          return `
+            <div style="font-weight: 600; margin-bottom: 8px;">${params.name}</div>
+            <div style="display: flex; justify-content: space-between; gap: 20px;">
+              <span style="color: #6b7280;">最小值:</span>
+              <span>${Math.round(data[1]).toLocaleString()}元/㎡</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 20px;">
+              <span style="color: #6b7280;">下四分位:</span>
+              <span>${Math.round(data[2]).toLocaleString()}元/㎡</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 20px;">
+              <span style="color: #6b7280;">中位数:</span>
+              <span style="font-weight: 600; color: #2563eb;">${Math.round(data[3]).toLocaleString()}元/㎡</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 20px;">
+              <span style="color: #6b7280;">上四分位:</span>
+              <span>${Math.round(data[4]).toLocaleString()}元/㎡</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 20px;">
+              <span style="color: #6b7280;">最大值:</span>
+              <span>${Math.round(data[5]).toLocaleString()}元/㎡</span>
+            </div>
+          `;
         }
-        
-        districtGroups[districtName].push([area, totalPrice, `${districtName} - ${layout}`]);
-      });
-      
-      console.log('🎨 数据分组结果:', Object.keys(districtGroups).map(k => `${k}(${districtGroups[k].length})`));
-      
-      // 数据验证
-      if (Object.keys(districtGroups).length === 0) {
-        scatterContainer.innerHTML = `
-          <div class="chart-error">
-            <i data-lucide="inbox"></i>
-            <p>暂无${district ? district + '区' : ''}散点图数据</p>
-          </div>
-        `;
-        lucide.createIcons();
-        return;
-      }
-      
-      // ✅ 定义区域颜色映射 (北京16个区)
-      const districtColors = {
-        '东城': '#FF6B6B',     // 红色
-        '西城': '#4ECDC4',     // 青色
-        '朝阳': '#45B7D1',     // 浅蓝
-        '海淀': '#96CEB4',     // 绿色
-        '丰台': '#FFEAA7',     // 黄色
-        '石景山': '#DFE6E9',   // 灰色
-        '门头沟': '#A29BFE',   // 紫色
-        '房山': '#FD79A8',     // 粉色
-        '通州': '#FDCB6E',     // 橙色
-        '顺义': '#6C5CE7',     // 深紫
-        '昌平': '#00B894',     // 深绿
-        '大兴': '#E17055',     // 橙红
-        '怀柔': '#74B9FF',     // 天蓝
-        '平谷': '#A29BFE',     // 淡紫
-        '密云': '#55EFC4',     // 青绿
-        '延庆': '#FAB1A0'      // 橙粉
-      };
-      
-      // 清除加载动画后再初始化图表
-      scatterContainer.innerHTML = '';
-      scatterChart = echarts.init(scatterContainer);
-      
-      // ✅ 为每个区域创建一个 series
-      const seriesList = Object.entries(districtGroups).map(([districtName, points]) => ({
-        name: districtName,
-        type: 'scatter',
-        symbolSize: 8,
-        data: points,
+      },
+      grid: {
+        left: '10%',
+        right: '4%',
+        bottom: '15%',
+        top: '15%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: xAxisData,
+        axisLabel: { color: '#6b7280', rotate: 45 },
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        axisTick: { show: false }
+      },
+      yAxis: {
+        type: 'value',
+        name: '单价(元/㎡)',
+        nameTextStyle: { color: '#6b7280', fontSize: 12 },
+        axisLabel: { 
+          color: '#6b7280',
+          formatter: value => (value / 10000).toFixed(0) + '万'
+        },
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
+      },
+      series: [{
+        name: '房价分布',
+        type: 'boxplot',
+        data: seriesData,
         itemStyle: {
-          color: districtColors[districtName] || '#2563eb',
-          opacity: 0.7
+          color: '#2563eb',
+          borderColor: '#1d4ed8',
+          borderWidth: 2
         },
         emphasis: {
           itemStyle: {
-            opacity: 1,
-            borderWidth: 2,
-            borderColor: '#fff',
-            shadowBlur: 10,
-            shadowColor: 'rgba(0,0,0,0.3)'
+            color: '#1d4ed8',
+            borderColor: '#1e40af',
+            borderWidth: 3
           }
         }
-      }));
-      
-      const scatterOption = {
-        title: { 
-          text: district ? `${district} - 面积总价分布` : '全市面积总价分布', 
-          left: 'center',
-          textStyle: { fontSize: 16, fontWeight: 600, color: '#1f2937' }
-        },
-        tooltip: {
-          trigger: 'item',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderColor: '#e5e7eb',
-          borderWidth: 1,
-          padding: [12, 16],
-          textStyle: { color: '#1f2937' },
-          formatter: function(params) {
-            const area = params.value[0] || 0;
-            const totalPrice = params.value[1] || 0;
-            const label = params.value[2] || '房源信息';
-            
-            return `
-              <div style="font-weight: 600; margin-bottom: 8px;">${label}</div>
-              <div style="display: flex; justify-content: space-between; gap: 20px;">
-                <span style="color: #6b7280;">面积:</span>
-                <span style="font-weight: 600;">${area.toFixed(2)}㎡</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; gap: 20px;">
-                <span style="color: #6b7280;">总价:</span>
-                <span style="font-weight: 600; color: #ef4444;">${totalPrice.toFixed(0)}万</span>
-              </div>
-            `;
-          }
-        },
-        // ✅ 添加图例
-        legend: {
-          type: 'scroll',
-          orient: 'vertical',
-          right: 10,
-          top: 50,
-          bottom: 20,
-          data: Object.keys(districtGroups),
-          textStyle: { fontSize: 12 },
-          pageIconSize: 12,
-          pageTextStyle: { fontSize: 12 }
-        },
-        grid: {
-          left: '10%',
-          right: district ? '4%' : '120px', // 全市模式留空间给图例
-          bottom: '10%',
-          top: '15%',
-          containLabel: true
-        },
-        xAxis: {
-          type: 'value',
-          name: '面积(㎡)',
-          nameTextStyle: { color: '#6b7280', fontSize: 12 },
-          axisLabel: { color: '#6b7280' },
-          axisLine: { lineStyle: { color: '#e5e7eb' } },
-          splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
-        },
-        yAxis: {
-          type: 'value',
-          name: '总价(万)',
-          nameTextStyle: { color: '#6b7280', fontSize: 12 },
-          axisLabel: { color: '#6b7280' },
-          axisLine: { lineStyle: { color: '#e5e7eb' } },
-          splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
-        },
-        series: seriesList
-      };
-      
-      scatterChart.setOption(scatterOption);
-      console.log('✅ 散点图渲染完成，共', seriesList.length, '个区域');
-      
-    } catch (error) {
-      console.error('❌ 散点图加载失败:', error);
-      scatterContainer.innerHTML = `
-        <div class="chart-error">
-          <i data-lucide="alert-circle"></i>
-          <p>加载散点图失败</p>
-          <p style="font-size:12px;color:#999;margin-top:8px;">
-            ${error.message || '未知错误'}
-          </p>
-        </div>
-      `;
-      lucide.createIcons();
-    }
+      }]
+    };
+    
+    boxplotChart.setOption(boxplotOption);
+    boxplotContainer.dataset.initialized = 'true';
+    console.log('✅ 箱线图渲染完成');
+    
+  } catch (error) {
+    console.error('❌ 箱线图加载失败:', error);
+    boxplotContainer.innerHTML = `
+      <div class="chart-error">
+        <i data-lucide="alert-circle"></i>
+        <p>加载箱线图失败</p>
+        <p style="font-size:12px;color:#999;margin-top:8px;">
+          ${error.message || '未知错误'}
+        </p>
+      </div>
+    `;
+    lucide.createIcons();
   }
-  
-  // ✅ 2. 加载箱线图 (独立 try-catch，仅首次加载)
-  if (boxplotContainer && !boxplotContainer.dataset.initialized) {
-    try {
-      boxplotContainer.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-      
-      const boxplotData = await API.beijing.getBoxplotData();
-      
-      console.log('✅ 箱线图数据加载成功');
-      
-      // 清除加载动画
-      boxplotContainer.innerHTML = '';
-      
-      if (!boxplotChart) {
-        boxplotChart = echarts.init(boxplotContainer);
-      }
-      
-      // 处理箱线图数据
-      const districts = boxplotData.boxplot || [];
-      const xAxisData = districts.map(d => d.district);
-      const seriesData = districts.map(d => [
-        parseFloat(d.min) || 0, 
-        parseFloat(d.q1) || 0, 
-        parseFloat(d.median) || 0, 
-        parseFloat(d.q3) || 0, 
-        parseFloat(d.max) || 0
-      ]);
-      
-      const boxplotOption = {
-        title: { 
-          text: '各区房价分布箱线图', 
-          left: 'center',
-          textStyle: { fontSize: 16, fontWeight: 600, color: '#1f2937' }
-        },
-        tooltip: {
-          trigger: 'item',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderColor: '#e5e7eb',
-          borderWidth: 1,
-          padding: [12, 16],
-          textStyle: { color: '#1f2937' },
-          formatter: function(params) {
-            const data = params.data;
-            return `
-              <div style="font-weight: 600; margin-bottom: 8px;">${params.name}</div>
-              <div style="display: flex; justify-content: space-between; gap: 20px;">
-                <span style="color: #6b7280;">最小值:</span>
-                <span>${Math.round(data[1]).toLocaleString()}元/㎡</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; gap: 20px;">
-                <span style="color: #6b7280;">下四分位:</span>
-                <span>${Math.round(data[2]).toLocaleString()}元/㎡</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; gap: 20px;">
-                <span style="color: #6b7280;">中位数:</span>
-                <span style="font-weight: 600; color: #2563eb;">${Math.round(data[3]).toLocaleString()}元/㎡</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; gap: 20px;">
-                <span style="color: #6b7280;">上四分位:</span>
-                <span>${Math.round(data[4]).toLocaleString()}元/㎡</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; gap: 20px;">
-                <span style="color: #6b7280;">最大值:</span>
-                <span>${Math.round(data[5]).toLocaleString()}元/㎡</span>
-              </div>
-            `;
-          }
-        },
-        grid: {
-          left: '10%',
-          right: '4%',
-          bottom: '15%',
-          top: '15%',
-          containLabel: true
-        },
-        xAxis: {
-          type: 'category',
-          data: xAxisData,
-          axisLabel: { color: '#6b7280', rotate: 45 },
-          axisLine: { lineStyle: { color: '#e5e7eb' } },
-          axisTick: { show: false }
-        },
-        yAxis: {
-          type: 'value',
-          name: '单价(元/㎡)',
-          nameTextStyle: { color: '#6b7280', fontSize: 12 },
-          axisLabel: { 
-            color: '#6b7280',
-            formatter: value => (value / 10000).toFixed(0) + '万'
-          },
-          axisLine: { lineStyle: { color: '#e5e7eb' } },
-          splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
-        },
-        series: [{
-          name: '房价分布',
-          type: 'boxplot',
-          data: seriesData,
-          itemStyle: {
-            color: '#2563eb',
-            borderColor: '#1d4ed8',
-            borderWidth: 2
-          },
-          emphasis: {
-            itemStyle: {
-              color: '#1d4ed8',
-              borderColor: '#1e40af',
-              borderWidth: 3
-            }
-          }
-        }]
-      };
-      
-      boxplotChart.setOption(boxplotOption);
-      boxplotContainer.dataset.initialized = 'true';
-      console.log('✅ 箱线图渲染完成');
-      
-    } catch (error) {
-      console.error('❌ 箱线图加载失败:', error);
-      boxplotContainer.innerHTML = `
-        <div class="chart-error">
-          <i data-lucide="alert-circle"></i>
-          <p>加载箱线图失败</p>
-          <p style="font-size:12px;color:#999;margin-top:8px;">
-            ${error.message || '未知错误'}
-          </p>
-        </div>
-      `;
-      lucide.createIcons();
-    }
-  }
-  
-  // ✅ 添加窗口 resize 事件监听（仅一次）
+}
+
+/**
+ * 加载图表数据 - 调用独立函数
+ */
+async function loadChartData(district = '') {
+  // 添加 resize 事件监听（仅一次）
   if (!window.beijingDataChartsResizeAdded) {
     window.addEventListener('resize', () => {
       scatterChart?.resize();
@@ -754,6 +735,12 @@ async function loadChartData(district = '') {
     });
     window.beijingDataChartsResizeAdded = true;
   }
+  
+  // 并行加载散点图和箱线图
+  await Promise.all([
+    loadScatterChart(district),
+    loadBoxplotChart()
+  ]);
 }
 
 /**
@@ -876,34 +863,14 @@ function renderHouseList(houses) {
  * 显示提示消息
  */
 function showToast(message, type = 'info') {
-  // 移除已存在的 toast
-  const existingToast = document.querySelector('.toast-message');
-  if (existingToast) existingToast.remove();
-  
   const toast = document.createElement('div');
-  toast.className = `toast-message toast-${type}`;
-  
-  const icons = {
-    success: '✓',
-    error: '✕',
-    info: 'ℹ'
-  };
-  
-  toast.innerHTML = `
-    <span class="toast-icon">${icons[type] || icons.info}</span>
-    <span class="toast-text">${message}</span>
-  `;
-  
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
   document.body.appendChild(toast);
   
-  // 动画显示
-  setTimeout(() => toast.classList.add('show'), 10);
-  
-  // 3秒后自动消失
   setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, 2500);
+    toast.remove();
+  }, 3000);
 }
 
 /**
@@ -1017,13 +984,13 @@ function bindEvents() {
     loadHouseList(1);
   });
   
-  // ✅ 修复：散点图区域切换事件（调用 loadChartData 而非 loadScatterChart）
+  // ✅ 散点图区域切换事件
   document.querySelectorAll('#tab-chart .chart-tab').forEach(tab => {
     tab.addEventListener('click', function() {
       document.querySelectorAll('#tab-chart .chart-tab').forEach(t => t.classList.remove('active'));
       this.classList.add('active');
       const district = this.dataset.district || '';
-      loadChartData(district); // ✅ 修复：传递区域参数
+      loadScatterChart(district); // ✅ 只重新加载散点图
     });
   });
 }
@@ -1186,259 +1153,5 @@ function formatLargeNumber(num) {
     return (num / 10000).toFixed(1) + '万';
   }
   return num.toLocaleString();
-}
-
-/**
- * 显示提示消息
- */
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
-}
-
-// ========== 📊 加载行政区排名柱状图 ==========
-// async function loadDistrictRanking() {
-//     const chartDom = document.getElementById('district-chart');
-//     if (!chartDom) return;
-    
-//     try {
-//         // ✅ 显示加载动画
-//         chartDom.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-        
-//         const data = await API.beijing.getDistrictRanking();
-        
-//         // ✅ 清除加载动画
-//         chartDom.innerHTML = '';
-        
-//         const myChart = echarts.init(chartDom);
-//         const option = {
-//             title: { text: '北京各区房价排行', left: 'center' },
-//             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-//             // ...existing code...
-//         };
-        
-//         myChart.setOption(option);
-        
-//     } catch (error) {
-//         console.error('加载行政区排名失败:', error);
-//         // ✅ 显示错误提示
-//         chartDom.innerHTML = '<div class="chart-error"><i data-lucide="alert-circle"></i><p>加载失败，请稍后重试</p></div>';
-//         lucide.createIcons();
-//     }
-// }
-
-// ========== 📊 加载楼层分析柱状图 ==========
-// async function loadFloorAnalysis() {
-//     const chartDom = document.getElementById('floor-chart');
-//     if (!chartDom) return;
-    
-//     try {
-//         // ✅ 显示加载动画
-//         chartDom.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-        
-//         const data = await API.beijing.getFloorAnalysis();
-        
-//         // ✅ 清除加载动画
-//         chartDom.innerHTML = '';
-        
-//         const myChart = echarts.init(chartDom);
-//         const option = {
-//             title: { text: '楼层与房价关系', left: 'center' },
-//             // ...existing code...
-//         };
-        
-//         myChart.setOption(option);
-        
-//     } catch (error) {
-//         console.error('加载楼层分析失败:', error);
-//         chartDom.innerHTML = '<div class="chart-error"><i data-lucide="alert-circle"></i><p>加载失败，请稍后重试</p></div>';
-//         lucide.createIcons();
-//     }
-// }
-
-// ========== 📊 加载户型分析柱状图 ==========
-// async function loadLayoutAnalysis() {
-//     const chartDom = document.getElementById('layout-chart');
-//     if (!chartDom) return;
-    
-//     try {
-//         // ✅ 显示加载动画
-//         chartDom.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-        
-//         const data = await API.beijing.getLayoutAnalysis();
-        
-//         // ✅ 清除加载动画
-//         chartDom.innerHTML = '';
-        
-//         const myChart = echarts.init(chartDom);
-//         const option = {
-//             title: { text: '户型分布与均价', left: 'center' },
-//             // ...existing code...
-//         };
-        
-//         myChart.setOption(option);
-        
-//     } catch (error) {
-//         console.error('加载户型分析失败:', error);
-//         chartDom.innerHTML = '<div class="chart-error"><i data-lucide="alert-circle"></i><p>加载失败，请稍后重试</p></div>';
-//         lucide.createIcons();
-//     }
-// }
-
-// ========== 📊 加载朝向分析雷达图 ==========
-// async function loadOrientationAnalysis() {
-//     const chartDom = document.getElementById('orientation-chart');
-//     if (!chartDom) return;
-    
-//     try {
-//         // ✅ 显示加载动画
-//         chartDom.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-        
-//         const data = await API.beijing.getOrientationAnalysis();
-        
-//         // ✅ 清除加载动画
-//         chartDom.innerHTML = '';
-        
-//         const myChart = echarts.init(chartDom);
-//         const option = {
-//             title: { text: '朝向与房价', left: 'center' },
-//             // ...existing code...
-//         };
-        
-//         myChart.setOption(option);
-        
-//     } catch (error) {
-//         console.error('加载朝向分析失败:', error);
-//         chartDom.innerHTML = '<div class="chart-error"><i data-lucide="alert-circle"></i><p>加载失败，请稍后重试</p></div>';
-//         lucide.createIcons();
-//     }
-// }
-
-// ========== 📊 加载电梯分析饼图 ==========
-// async function loadElevatorAnalysis() {
-//     const chartDom = document.getElementById('elevator-chart');
-//     if (!chartDom) return;
-    
-//     try {
-//         // ✅ 显示加载动画
-//         chartDom.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-        
-//         const data = await API.beijing.getElevatorAnalysis();
-        
-//         // ✅ 清除加载动画
-//         chartDom.innerHTML = '';
-        
-//         const myChart = echarts.init(chartDom);
-//         const option = {
-//             title: { text: '电梯房源占比', left: 'center' },
-//             // ...existing code...
-//         };
-        
-//         myChart.setOption(option);
-        
-//     } catch (error) {
-//         console.error('加载电梯分析失败:', error);
-//         chartDom.innerHTML = '<div class="chart-error"><i data-lucide="alert-circle"></i><p>加载失败，请稍后重试</p></div>';
-//         lucide.createIcons();
-//     }
-// }
-
-// ========== 📊 加载散点图 (保持独立) ==========
-async function loadScatterChart(district = null) {
-    const chartDom = document.getElementById('scatterChart');
-    if (!chartDom) return;
-    
-    try {
-        // ✅ 显示加载动画
-        chartDom.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-        
-        const data = await API.beijing.getScatterData(district ? { district } : {});
-        
-        // ✅ 清除加载动画
-        chartDom.innerHTML = '';
-        
-        // ✅ 销毁旧实例并重新初始化（确保切换区域时清除旧数据点）
-        scatterChart?.dispose();
-        scatterChart = echarts.init(chartDom);
-        
-        const option = {
-            title: { text: '面积-总价分布', left: 'center' },
-            tooltip: {
-                trigger: 'item',
-                formatter: function(params) {
-                    return `面积: ${params.value[0]}㎡<br/>总价: ${params.value[1]}万`;
-                }
-            },
-            xAxis: {
-                type: 'value',
-                name: '面积(㎡)',
-                axisLabel: { color: '#6b7280' },
-                splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
-            },
-            yAxis: {
-                type: 'value',
-                name: '总价(万)',
-                axisLabel: { color: '#6b7280' },
-                splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
-            },
-            series: [{
-                type: 'scatter',
-                symbolSize: 8,
-                data: data.points.map(p => [p.area, p.total_price]),
-                itemStyle: {
-                    color: '#2563eb',
-                    opacity: 0.6
-                },
-                emphasis: {
-                    itemStyle: {
-                        color: '#1d4ed8',
-                        opacity: 1
-                    }
-                }
-            }]
-        };
-        
-        scatterChart.setOption(option);
-        
-    } catch (error) {
-        console.error('加载散点图失败:', error);
-        chartDom.innerHTML = '<div class="chart-error"><i data-lucide="alert-circle"></i><p>加载失败，请稍后重试</p></div>';
-        lucide.createIcons();
-    }
-}
-
-// ========== 📊 加载箱线图 (保持独立，可选) ==========
-async function loadBoxplotChart() {
-    const chartDom = document.getElementById('boxplotChart');
-    if (!chartDom) return;
-    
-    try {
-        // ✅ 显示加载动画
-        chartDom.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
-        
-        const data = await API.beijing.getBoxplotData();
-        
-        // ✅ 清除加载动画
-        chartDom.innerHTML = '';
-        
-        const myChart = echarts.init(chartDom);
-        const option = {
-            title: { text: '各区房价分布箱线图', left: 'center' },
-            // ...existing code...
-        };
-        
-        myChart.setOption(option);
-        
-    } catch (error) {
-        console.error('加载箱线图失败:', error);
-        chartDom.innerHTML = '<div class="chart-error"><i data-lucide="alert-circle"></i><p>加载失败，请稍后重试</p></div>';
-        lucide.createIcons();
-    }
 }
 
