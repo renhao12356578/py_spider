@@ -286,9 +286,21 @@ def get_city_ranking(rank_type: str, limit: int = 10, order: str = "desc") -> st
             "rent_ratio": "price_rent_ratio"  # 租售比排行
         }
         field = type_field_map[rank_type]
-
+        #print(f"🏆 获取城市排行榜: 类型={rank_type}, 字段={field}, 限制={limit}, 顺序={order}")
         # 构建查询
-        if rank_type == "change":
+        if rank_type == "price" or rank_type == "rent_ratio":
+            # 其他类型直接取城市去重数据
+            query = f"""
+            SELECT DISTINCT
+                city_name,
+                {field} as value
+            FROM current_price
+            WHERE {field} IS NOT NULL AND {field} > 0
+            ORDER BY {field} {order.upper()}
+            LIMIT {limit}
+            """
+        
+        elif rank_type == "change":
             # 涨跌比取城市下所有区县的平均值
             query = f"""
             SELECT 
@@ -300,17 +312,7 @@ def get_city_ranking(rank_type: str, limit: int = 10, order: str = "desc") -> st
             ORDER BY value {order.upper()}
             LIMIT {limit}
             """
-        else:
-            # 其他类型直接取城市去重数据
-            query = f"""
-            SELECT DISTINCT
-                city_name,
-                {field} as value
-            FROM current_price
-            WHERE {field} IS NOT NULL AND {field} > 0
-            ORDER BY {field} {order.upper()}
-            LIMIT {limit}
-            """
+        
 
         cursor.execute(query)
         results = cursor.fetchall()
@@ -436,12 +438,12 @@ def get_price_trend(city: str, year: Optional[int] = None) -> str:
     try:
         cursor = connection.cursor(pymysql.cursors.DictCursor)
 
-        # 构建年份条件（默认2023-2025）
+    
         year_condition = ""
-        if year and year >= 2023 and year <= 2025:
+        if year:
             year_condition = f"AND year = {year}"
         else:
-            year_condition = "AND year BETWEEN 2023 AND 2025"
+            year_condition = "AND year = 2025"
 
         query = f"""
         SELECT

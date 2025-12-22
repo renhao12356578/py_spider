@@ -17,6 +17,22 @@ const Charts = {
     border: '#e5e7eb'
   },
   
+  // 柱状图配色方案（多色）
+  barColors: [
+    '#2563eb', // 蓝
+    '#10b981', // 绿
+    '#f59e0b', // 橙
+    '#06b6d4', // 青
+    '#ef4444', // 红
+    '#8b5cf6', // 紫
+    '#ec4899', // 粉
+    '#14b8a6', // 蓝绿
+    '#a3e635', // 亮绿
+    '#f472b6', // 玫红
+    '#22d3ee', // 亮青
+    '#fb923c'  // 橘
+  ],
+  
   // 地图颜色分级
   mapColors: ['#d4e4fc', '#85b8f8', '#4d94f5', '#2563eb', '#1e40af'],
   
@@ -287,31 +303,19 @@ const Charts = {
         type: 'bar',
         barWidth: '60%',
         itemStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: this.colors.primary },
-              { offset: 1, color: '#7c3aed' }
-            ]
+          // 每个柱子使用不同颜色
+          color: (params) => {
+            const palette = Charts.barColors || [];
+            return palette[params.dataIndex % palette.length] || Charts.colors.primary;
           },
           borderRadius: [4, 4, 0, 0]
         },
         emphasis: {
           itemStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: '#1d4ed8' },
-                { offset: 1, color: '#6d28d9' }
-              ]
+            // 高亮时同色加深（简单处理：不改变颜色）
+            color: (params) => {
+              const palette = Charts.barColors || [];
+              return palette[params.dataIndex % palette.length] || Charts.colors.primary;
             }
           }
         },

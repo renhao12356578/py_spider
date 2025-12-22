@@ -49,7 +49,7 @@ async function initPage() {
     loadCityPrices(),
     loadRankingData('price'),
     loadProvinces(),
-    loadTrendData()
+    loadTrendData("北京", "2025")
   ]);
 }
 
@@ -338,9 +338,11 @@ async function loadProvinces() {
 /**
  * 加载趋势数据
  */
-async function loadTrendData(city = '') {
+async function loadTrendData(city = '', year = '') {
   try {
-    const data = await API.national.getTrend(city);
+    console.log('📈 加载趋势数据:', { city, year });
+    
+    const data = await API.national.getTrend(city, year);
     
     if (trendChart && data.trends) {
       const option = Charts.getTrendLineOption(data.trends);
@@ -389,9 +391,19 @@ function bindEvents() {
     }
   });
   
-  // 趋势图城市筛选
+  // ✅ 趋势图城市筛选
   document.getElementById('trendCityFilter')?.addEventListener('change', function() {
-    loadTrendData(this.value);
+    const city = this.value;
+    const year = document.getElementById('trendYearFilter')?.value || '';
+    loadTrendData(city, year);
+  });
+  
+  // ✅ 新增：趋势图年份筛选
+  document.getElementById('trendYearFilter')?.addEventListener('change', function() {
+    const city = document.getElementById('trendCityFilter')?.value || '';
+    const year = this.value;
+    console.log('🔍 切换年份:', year);
+    loadTrendData(city, year);
   });
   
   // 搜索功能

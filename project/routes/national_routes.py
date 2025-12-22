@@ -35,7 +35,7 @@ def province_list():
 @national_bp.route('/ranking', methods=['GET'])
 def city_ranking():
     """获取城市排行榜"""
-    rank_type = request.args.get('rank_type', 'price')
+    rank_type = request.args.get('type', 'price')
     limit = request.args.get('limit', 10, type=int)
     order = request.args.get('order', 'desc')
     result = dp.get_city_ranking(rank_type, limit, order)
