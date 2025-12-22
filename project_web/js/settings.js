@@ -21,25 +21,33 @@ document.addEventListener('DOMContentLoaded', async function() {
   // 初始化图标
   lucide.createIcons();
   
-  // ========== 加载用户资料 ==========
-  async function loadProfile() {
-    try {
-      const profile = await API.user.getProfile();
-      
-      // 填充表单
-      document.querySelector('[name="nickname"]')?.setAttribute('value', profile.nickname || '');
-      document.querySelector('[name="email"]')?.setAttribute('value', profile.email || '');
-      document.querySelector('[name="phone"]')?.setAttribute('value', profile.phone || '');
-      document.querySelector('[name="bio"]')?.value = profile.bio || '';
-      
-      // 显示用户名
-      const usernameInput = document.querySelector('.profile-form input[readonly]');
-      if (usernameInput) usernameInput.value = profile.username || '';
-      
-    } catch (error) {
-      console.error('加载用户资料失败:', error);
+    // ========== 加载用户资料 ==========
+  async function loadProfile() {    
+    try {      
+        const profile = await API.user.getProfile();            
+        
+        // 填充表单      
+        // 使用setAttribute的方式（安全，但通常value属性更好）
+        const nicknameInput = document.querySelector('[name="nickname"]');
+        if (nicknameInput) nicknameInput.value = profile.nickname || '';
+        
+        const emailInput = document.querySelector('[name="email"]');
+        if (emailInput) emailInput.value = profile.email || '';
+        
+        const phoneInput = document.querySelector('[name="phone"]');
+        if (phoneInput) phoneInput.value = profile.phone || '';
+        
+        const bioInput = document.querySelector('[name="bio"]');  // 第33行修正
+        if (bioInput) bioInput.value = profile.bio || '';
+        
+        // 显示用户名      
+        const usernameInput = document.querySelector('.profile-form input[readonly]');      
+        if (usernameInput) usernameInput.value = profile.username || '';      
+        
+    } catch (error) {      
+        console.error('加载用户资料失败:', error);
     }
-  }
+}
   
   // ========== 保存用户资料 ==========
   const profileForm = document.querySelector('.profile-form');
