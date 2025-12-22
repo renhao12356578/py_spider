@@ -382,11 +382,143 @@ def example_usage():
         province="北京",
         city="北京",
         district="朝阳",
-        forecast_periods=12
+        forecast_periods=36
     )
     print("区县预测结果:")
     print(result2)
 
 
 if __name__ == "__main__":
+    # 默认保留单城市示例调用
     example_usage()
+
+    # 批量预测并导出 CSV（用户要求：向后预测36个月并导出源数据与预测数据）
+    def batch_predict_and_export(cities: List[str], province_override: Optional[str] = None,
+                                 forecast_periods: int = 36, out_dir: str = 'outputs') -> dict:
+        """
+        对多个城市执行预测，将历史源数据与预测结果导出为 CSV 文件。
+        - cities: 城市名称列表（中文）
+        - province_override: 若需要，可指定统一的 province 字段（否则使用城市名作为 province）
+        - forecast_periods: 预测期数（月），默认36
+        - out_dir: 导出目录
+        返回字典：包含写入文件路径与处理状态
+        """
+        os.makedirs(out_dir, exist_ok=True)
+
+        all_hist_rows = []
+        all_pred_rows = []
+        current_prices = []
+
+        for city_name in cities:
+            try:
+                print(f"Processing city: {city_name}")
+                province = province_override or city_name
+
+                # 获取源历史数据（get_historical_prices 返回 JSON 字符串）
+                hist_json = get_historical_prices(province=province, city=city_name)
+                hist_resp = json.loads(hist_json)
+                if hist_resp.get('code') != 200:
+                    print(f"Warning: failed to fetch historical for {city_name}: {hist_resp}")
+                    continue
+
+                records = hist_resp['data'].get('records', [])
+                for r in records:
+                    all_hist_rows.append({
+                        'city': city_name,
+                        'year': r.get('year'),
+                        'month': r.get('month'),
+                        'date': r.get('date'),
+                        'price': r.get('price') if 'price' in r else r.get('avg_price')
+                    })
+
+                # 执行预测（使用现有接口）
+                pred_json = predict_city_prices(province=province, city=city_name, forecast_periods=forecast_periods)
+                pred_resp = json.loads(pred_json)
+                if pred_resp.get('code') != 200:
+                    print(f"Warning: prediction failed for {city_name}: {pred_resp}")
+                    continue
+
+                analysis = pred_resp['data'].get('analysis', {})
+                forecast_dates = analysis.get('forecast_dates', [])
+
+                # 记录所有方法的预测结果（linear/polynomial/exponential/moving_average/ensemble 等）
+                methods_results = analysis.get('forecast_results', {})
+                for method_name, method_res in methods_results.items():
+                    preds = method_res.get('predictions', []) or []
+                    for idx, date_str in enumerate(forecast_dates):
+                        pred_val = preds[idx] if idx < len(preds) else None
+                        all_pred_rows.append({
+                            'city': city_name,
+                            'date': date_str,
+                            'predicted_price': int(round(pred_val)) if pred_val is not None else None,
+                            'method': method_name,
+                            # 可选：保留方法级别的额外信息（如 r_squared/formula）
+                            'detail': json.dumps({k: v for k, v in method_res.items() if k != 'predictions'}, ensure_ascii=False)
+                        })
+
+                # 记录当前价格与摘要信息
+                current_price = analysis.get('current_price')
+                summary_obj = analysis.get('summary', {}) or {}
+                current_prices.append({'city': city_name, 'current_price': current_price})
+
+                # 汇总信息写入 summary 列表（随后导出为 CSV）
+                # 包含：city, current_price, trend, change_percent, confidence, historical_count
+                historical_count = len(records)
+                if 'summaries' not in locals():
+                    summaries = []
+                summaries.append({
+                    'city': city_name,
+                    'current_price': current_price,
+                    'trend': summary_obj.get('trend'),
+                    'change_percent': summary_obj.get('change_percent'),
+                    'confidence': summary_obj.get('confidence'),
+                    'historical_count': historical_count
+                })
+
+            except Exception as e:
+                print(f"Error processing {city_name}: {e}")
+                continue
+
+        # 导出 CSV
+        hist_df = pd.DataFrame(all_hist_rows)
+        pred_df = pd.DataFrame(all_pred_rows)
+        curr_df = pd.DataFrame(current_prices)
+
+        hist_path = os.path.join(out_dir, 'historical_all.csv')
+        pred_path = os.path.join(out_dir, 'predictions_all.csv')
+        curr_path = os.path.join(out_dir, 'current_prices.csv')
+        summary_path = os.path.join(out_dir, 'summary_all.csv')
+
+        hist_df.to_csv(hist_path, index=False, encoding='utf-8-sig')
+        pred_df.to_csv(pred_path, index=False, encoding='utf-8-sig')
+        curr_df.to_csv(curr_path, index=False, encoding='utf-8-sig')
+
+        # 导出 summary（若存在）
+        if 'summaries' in locals() and summaries:
+            summary_df = pd.DataFrame(summaries)
+            summary_df.to_csv(summary_path, index=False, encoding='utf-8-sig')
+            print(f"Wrote summary -> {summary_path}")
+        else:
+            summary_path = None
+
+        print(f"Wrote historical -> {hist_path}")
+        print(f"Wrote predictions -> {pred_path}")
+        print(f"Wrote current prices -> {curr_path}")
+
+        return {
+            'historical_csv': hist_path,
+            'predictions_csv': pred_path,
+            'current_csv': curr_path,
+            'summary_csv': summary_path,
+            'cities_processed': len(curr_df)
+        }
+
+    # 用户提供的城市列表（包含拼接情况），注意某些城市可能粘连在一起，需要用户确认
+    cities_to_run = [
+        '昆明','福州','济南','贵阳','南昌','杭州','合肥','乌鲁木齐','广州','郑州','武汉','南宁','成都','兰州','西宁','石家庄','哈尔滨',
+        '长春','银川','上海','天津','重庆','呼和浩特','西安','长沙','沈阳','太原','南京','海口','北京','深圳'
+    ]
+
+    # 运行批量预测并导出（36个月）
+    summary = batch_predict_and_export(cities=cities_to_run, forecast_periods=36, out_dir='outputs')
+    print('Batch export summary:', summary)
