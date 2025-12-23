@@ -610,18 +610,24 @@ def get_static_reports():
         }), 500
 
 
-@reports_bp.route('/static/download/<filename>', methods=['GET'])
+@reports_bp.route('/static/download/<path:filename>', methods=['GET'])
 def download_static_report(filename):
     """下载静态报告文件（无需认证）"""
     try:
-        safe_filename = os.path.basename(filename)
+        from urllib.parse import unquote
+        safe_filename = os.path.basename(unquote(filename))
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         filepath = os.path.join(base_dir, 'report', 'down', safe_filename)
+        
+        print(f"下载请求文件名: {filename}")
+        print(f"解码后文件名: {safe_filename}")
+        print(f"完整路径: {filepath}")
+        print(f"文件是否存在: {os.path.exists(filepath)}")
 
         if not os.path.exists(filepath):
             return jsonify({
                 "code": 404,
-                "message": "文件不存在"
+                "message": f"文件不存在: {safe_filename}"
             }), 404
 
         return send_file(

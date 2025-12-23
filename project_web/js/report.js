@@ -244,43 +244,97 @@ document.addEventListener('DOMContentLoaded', async function() {
       });
       lucide.createIcons();
     } else {
-      // 已登录用户：正常生成报告
-      generateBtn.addEventListener('click', async function() {
-        if (!selectedReportType) {
-          alert('请先选择报告类型');
-          return;
-        }
-        
-        this.disabled = true;
-        this.innerHTML = '<div class="btn-spinner"></div> 生成中...';
-        
-        try {
-          const result = await API.report.generate({
-            type: selectedReportType,
-            city: '北京',
-            districts: [],
-            date_range: { start: '', end: '' },
-            metrics: [],
-            format: 'pdf'
-          });
-          
-          alert(`报告生成请求已提交！预计需要 ${result.estimated_time || 30} 秒`);
-          
-          // 刷新报告列表
-          setTimeout(() => {
-            loadReportList();
-          }, 2000);
-          
-        } catch (error) {
-          alert(error.message || '生成报告失败');
-        } finally {
-          this.disabled = false;
-          this.innerHTML = '<i data-lucide="file-plus"></i> 生成报告';
-          lucide.createIcons();
-        }
+      // 已登录用户：打开生成报告模态框
+      generateBtn.addEventListener('click', function() {
+        openGenerateModal();
       });
     }
   }
+
+  // ========== 打开/关闭生成报告模态框 ==========
+  function openGenerateModal() {
+    const modal = document.getElementById('generateReportModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.position = 'fixed';
+      modal.style.top = '0';
+      modal.style.left = '0';
+      modal.style.width = '100%';
+      modal.style.height = '100%';
+      modal.style.zIndex = '9999';
+      modal.style.background = 'rgba(0, 0, 0, 0.5)';
+      lucide.createIcons();
+    }
+  }
+
+  window.closeGenerateModal = function() {
+    const modal = document.getElementById('generateReportModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  // ========== 处理生成报告表单提交 ==========
+  setTimeout(() => {
+    const form = document.getElementById('generateReportForm');
+    if (form) {
+      console.log('表单已找到，绑定提交事件');
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        console.log('表单提交事件触发');
+      
+      const formData = new FormData(this);
+      const metrics = [];
+      formData.getAll('metrics').forEach(m => metrics.push(m));
+      
+      const districts = formData.get('districts') ? formData.get('districts').split(',').map(d => d.trim()) : [];
+      
+      const params = {
+        type: formData.get('type'),
+        city: formData.get('city'),
+        districts: districts,
+        date_range: {
+          start: formData.get('start_date') || '',
+          end: formData.get('end_date') || ''
+        },
+        metrics: metrics,
+        format: formData.get('format')
+      };
+      
+      const submitBtn = document.querySelector('#generateReportModal button[type="submit"]');
+      if (!submitBtn) {
+        console.error('找不到提交按钮');
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<div class="btn-spinner"></div> 生成中...';
+      
+      try {
+        const result = await API.report.generate(params);
+        alert(`报告生成成功！报告ID: ${result.report_id || 'N/A'}`);
+        closeGenerateModal();
+        form.reset();
+        
+        // 刷新报告列表
+        setTimeout(() => {
+          loadReportList();
+          loadMyReports();
+        }, 1000);
+        
+      } catch (error) {
+        alert(error.message || '生成报告失败，请稍后重试');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i data-lucide="zap"></i> 生成报告';
+        lucide.createIcons();
+      }
+    });
+    } else {
+      console.error('找不到表单元素 generateReportForm');
+    }
+  }, 100);
   
   // ========== 加载我的报告 (仅登录用户) ==========
   async function loadMyReports() {

@@ -265,20 +265,20 @@ class ReportDatabase:
             insert_query = """
                 INSERT INTO reports (
                     title, summary, txt_path, cover_image_path, 
-                    type, city, user_id, ai_generated, 
+                    type, city, user_id, 
                     created_at, updated_at, status
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), 'draft')
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), 'completed')
             """
 
             cursor.execute(insert_query, (
                 title, summary, txt_filepath, cover_image_path,
-                report_type, city, user_id, 0  # ai_generated默认为0
+                report_type, city, user_id
             ))
 
             report_id = cursor.lastrowid
 
-            # 插入内容历史记录
-            self._save_content_history(report_id, content, user_id)
+            # 插入内容历史记录（暂时禁用，表不存在）
+            # self._save_content_history(report_id, content, user_id)
 
             connection.commit()
 
@@ -370,7 +370,7 @@ class ReportDatabase:
                 # 更新数据库记录
                 cursor.execute("""
                     UPDATE reports 
-                    SET updated_at = NOW(), ai_generated = ai_generated + 1
+                    SET updated_at = NOW()
                     WHERE id = %s
                 """, (report_id,))
 

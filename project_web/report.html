@@ -19,6 +19,7 @@
   <!-- Styles -->
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/report.css">
+  <link rel="stylesheet" href="css/modal.css">
 </head>
 <body>
   <div class="report-page">
@@ -173,6 +174,73 @@
           }
       });
       </script>
+
+      <!-- 生成报告模态框 -->
+      <div class="modal" id="generateReportModal">
+        <div class="modal-overlay" onclick="closeGenerateModal()"></div>
+        <div class="modal-content generate-modal">
+          <div class="modal-header">
+            <h2><i data-lucide="file-plus"></i> 生成自定义报告</h2>
+            <button class="modal-close" onclick="closeGenerateModal()">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="generateReportForm">
+              <div class="form-group">
+                <label><i data-lucide="tag"></i> 报告类型</label>
+                <select name="type" required>
+                  <option value="">请选择报告类型</option>
+                  <option value="market_analysis">市场趋势报告</option>
+                  <option value="district_analysis">城市分析报告</option>
+                  <option value="comparison">城市对比报告</option>
+                  <option value="investment">投资价值报告</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label><i data-lucide="map-pin"></i> 目标城市</label>
+                <input type="text" name="city" placeholder="例如：北京" required>
+              </div>
+              <div class="form-group">
+                <label><i data-lucide="layers"></i> 分析区域（可选）</label>
+                <input type="text" name="districts" placeholder="多个区域用逗号分隔，例如：朝阳区,海淀区">
+                <small>留空则分析整个城市</small>
+              </div>
+              <div class="form-group">
+                <label><i data-lucide="calendar"></i> 数据时间范围（可选）</label>
+                <div class="date-range">
+                  <input type="date" name="start_date">
+                  <span>至</span>
+                  <input type="date" name="end_date">
+                </div>
+              </div>
+              <div class="form-group">
+                <label><i data-lucide="check-square"></i> 分析指标</label>
+                <div class="checkbox-group">
+                  <label><input type="checkbox" name="metrics" value="price_trend" checked> 价格趋势</label>
+                  <label><input type="checkbox" name="metrics" value="supply_demand"> 供需关系</label>
+                  <label><input type="checkbox" name="metrics" value="investment_return"> 投资回报</label>
+                  <label><input type="checkbox" name="metrics" value="market_activity"> 市场活跃度</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label><i data-lucide="file-text"></i> 输出格式</label>
+                <div class="radio-group">
+                  <label><input type="radio" name="format" value="pdf" checked> PDF</label>
+                  <label><input type="radio" name="format" value="html"> HTML</label>
+                  <label><input type="radio" name="format" value="markdown"> Markdown</label>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeGenerateModal()">取消</button>
+            <button type="submit" form="generateReportForm" class="btn btn-primary">
+              <i data-lucide="zap"></i> 生成报告
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
     
     <!-- 页脚 -->
