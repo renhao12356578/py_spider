@@ -653,7 +653,7 @@ def get_beijing_overview() -> str:
 def get_district_ranking() -> str:
     """
     实现GET /api/beijing/district-ranking
-    返回行政区单价排名（前3）
+    返回行政区单价排名（全部）
     """
     connection = get_db_connection()
     if not connection:
@@ -663,25 +663,24 @@ def get_district_ranking() -> str:
         cursor = connection.cursor(pymysql.cursors.DictCursor)
 
         query = """
-                SELECT region                       as district, \
-                       ROUND(AVG(price_per_sqm), 0) as avg_price
-                FROM beijing_house_info
-                WHERE region IS NOT NULL \
-                  AND region != ''
-                GROUP BY region
-                ORDER BY avg_price DESC
-                    LIMIT 3 \
-                """
+        SELECT region as district, 
+               ROUND(AVG(price_per_sqm), 0) as avg_price,
+               COUNT(*) as count
+        FROM beijing_house_info
+        WHERE region IS NOT NULL AND region != ''
+        GROUP BY region
+        ORDER BY avg_price DESC
+        """
         cursor.execute(query)
         results = cursor.fetchall()
 
-        # 添加排名字段
         ranking = []
         for idx, item in enumerate(results, 1):
             ranking.append({
                 "rank": idx,
                 "district": item['district'],
-                "avg_price": int(item['avg_price']) if item['avg_price'] else 0
+                "avg_price": int(item['avg_price']) if item['avg_price'] else 0,
+                "count": item['count']
             })
 
         response = {

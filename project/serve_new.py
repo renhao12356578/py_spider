@@ -16,7 +16,6 @@ from routes.report_routes import reports_bp
 from routes import national_bp, beijing_bp, ai_bp
 from routes.auth_routes import auth_bp
 from routes.user import user_bp
-from routes.favorites_routes import favorites_bp
 from routes.ai_routes import load_all_sessions
 
 
@@ -39,7 +38,6 @@ app.register_blueprint(beijing_bp)   # 北京数据路由: /api/beijing/*
 app.register_blueprint(ai_bp)        # AI聊天路由: /api/beijing/ai/*
 app.register_blueprint(reports_bp)   # 报告路由: /api/reports/*
 app.register_blueprint(user_bp)      # 用户路由: /api/user/*
-app.register_blueprint(favorites_bp) # 收藏路由: /api/favorites/*
 
 @app.route('/')
 def index():
