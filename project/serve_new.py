@@ -17,6 +17,7 @@ from routes import national_bp, beijing_bp, ai_bp
 from routes.auth_routes import auth_bp
 from routes.user import user_bp
 from routes.ai_routes import load_all_sessions
+from routes.system_routes import system_bp
 
 
 # 创建Flask应用
@@ -38,6 +39,7 @@ app.register_blueprint(beijing_bp)   # 北京数据路由: /api/beijing/*
 app.register_blueprint(ai_bp)        # AI聊天路由: /api/beijing/ai/*
 app.register_blueprint(reports_bp)   # 报告路由: /api/reports/*
 app.register_blueprint(user_bp)      # 用户路由: /api/user/*
+app.register_blueprint(system_bp)    # 系统路由: /api/system/*
 
 @app.route('/')
 def index():

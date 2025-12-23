@@ -82,15 +82,32 @@ async function loadDistrictData() {
   const mapContainer = document.getElementById('districtMap');
   
   try {
-    // ✅ 显示排名列表加载动画
+    // ✅ 显示排名列表加载动画（使用 Spinner）
     if (rankingContainer) {
-      rankingContainer.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
+      rankingContainer.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">加载区域排名...</p>
+        </div>
+      `;
     }
     
-    // ✅ 显示地图加载动画（保存原始内容）
+    // ✅ 显示地图加载动画（使用图表骨架屏）
     if (mapContainer && !mapContainer.dataset.initialized) {
       mapContainer.dataset.originalContent = mapContainer.innerHTML;
-      mapContainer.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
+      mapContainer.innerHTML = `
+        <div class="skeleton-chart">
+          <div class="skeleton-chart-header">
+            <div class="skeleton-chart-title"></div>
+            <div class="skeleton-chart-legend">
+              <div class="skeleton-chart-legend-item"></div>
+              <div class="skeleton-chart-legend-item"></div>
+              <div class="skeleton-chart-legend-item"></div>
+            </div>
+          </div>
+          <div class="skeleton-chart-body"></div>
+        </div>
+      `;
     }
     
     // 并行加载排名和地图数据
@@ -102,9 +119,9 @@ async function loadDistrictData() {
     // ✅ 渲染排名列表
     renderDistrictList(rankingData.ranking || []);
     
-    // ✅ 恢复地图容器并初始化图表
+    // ✅ 清除骨架屏并初始化图表
     if (mapContainer) {
-      mapContainer.innerHTML = mapContainer.dataset.originalContent || '';
+      mapContainer.innerHTML = '';
       
       if (!districtMapChart) {
         districtMapChart = echarts.init(mapContainer);
@@ -292,11 +309,15 @@ function initAnalysisCharts() {
     elevator: document.getElementById('elevatorChart')
   };
   
-  // ✅ 为每个容器临时设置加载动画
+  // ✅ 为每个容器临时设置加载动画（使用骨架屏）
   Object.values(containers).forEach(container => {
     if (container && !container.dataset.initialized) {
       container.dataset.originalContent = container.innerHTML;
-      container.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
+      container.innerHTML = `
+        <div class="skeleton-chart">
+          <div class="skeleton-chart-body"></div>
+        </div>
+      `;
     }
   });
 }
@@ -323,9 +344,9 @@ async function loadAnalysisData() {
       API.beijing.getElevatorAnalysis()
     ]);
     
-    // ✅ 渲染楼层分析（恢复容器 + 初始化图表）
+    // ✅ 渲染楼层分析（清除骨架屏 + 初始化图表）
     if (containers.floor && floorData.floor_analysis) {
-      containers.floor.innerHTML = containers.floor.dataset.originalContent || '';
+      containers.floor.innerHTML = '';
       if (!floorChart) {
         floorChart = echarts.init(containers.floor);
       }
@@ -340,7 +361,7 @@ async function loadAnalysisData() {
     
     // ✅ 渲染户型分析
     if (containers.layout && layoutData.layout_analysis) {
-      containers.layout.innerHTML = containers.layout.dataset.originalContent || '';
+      containers.layout.innerHTML = '';
       if (!layoutChart) {
         layoutChart = echarts.init(containers.layout);
       }
@@ -355,7 +376,7 @@ async function loadAnalysisData() {
     
     // ✅ 渲染朝向分析
     if (containers.orientation && orientationData.orientation_analysis) {
-      containers.orientation.innerHTML = containers.orientation.dataset.originalContent || '';
+      containers.orientation.innerHTML = '';
       if (!orientationChart) {
         orientationChart = echarts.init(containers.orientation);
       }
@@ -370,7 +391,7 @@ async function loadAnalysisData() {
     
     // ✅ 渲染电梯分析
     if (containers.elevator && elevatorData.elevator_analysis) {
-      containers.elevator.innerHTML = containers.elevator.dataset.originalContent || '';
+      containers.elevator.innerHTML = '';
       if (!elevatorChart) {
         elevatorChart = echarts.init(containers.elevator);
       }
@@ -422,8 +443,12 @@ async function loadScatterChart(district = '') {
       scatterChart = null;
     }
     
-    // 显示加载动画
-    scatterContainer.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
+    // 显示加载动画（使用骨架屏）
+    scatterContainer.innerHTML = `
+      <div class="skeleton-chart">
+        <div class="skeleton-chart-body"></div>
+      </div>
+    `;
     
     // 请求数据
     const params = district ? { district } : { limit: 500 };
@@ -594,8 +619,12 @@ async function loadBoxplotChart() {
   }
   
   try {
-    // 显示加载动画
-    boxplotContainer.innerHTML = '<div class="chart-loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
+    // 显示加载动画（使用骨架屏）
+    boxplotContainer.innerHTML = `
+      <div class="skeleton-chart">
+        <div class="skeleton-chart-body"></div>
+      </div>
+    `;
     
     const boxplotData = await API.beijing.getBoxplotData();
     console.log('✅ 箱线图数据加载成功');
@@ -753,6 +782,7 @@ async function loadHouseList(page = 1) {
     container.innerHTML = `
       <div class="loading">
         <div class="loading-spinner"></div>
+        <p class="loading-text">加载房源列表...</p>
       </div>
     `;
     
@@ -1031,6 +1061,7 @@ function bindRecommendForm() {
       resultContainer.innerHTML = `
         <div class="loading">
           <div class="loading-spinner"></div>
+          <p class="loading-text">AI 正在推荐...</p>
         </div>
       `;
       

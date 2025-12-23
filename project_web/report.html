@@ -74,39 +74,15 @@
     <main class="report-main">
       <!-- 报告类型选择 -->
       <div class="report-types">
-        <div class="report-type-card" data-type="market">
-          <div class="type-icon">
-            <i data-lucide="trending-up"></i>
-          </div>
-          <h3 class="type-title">市场趋势报告</h3>
-          <p class="type-desc">全国及重点城市房价走势分析</p>
-          <span class="type-badge">热门</span>
-        </div>
-        
-        <div class="report-type-card" data-type="city">
-          <div class="type-icon">
-            <i data-lucide="map-pin"></i>
-          </div>
-          <h3 class="type-title">城市分析报告</h3>
-          <p class="type-desc">单一城市深度市场分析</p>
-        </div>
-        
-        <div class="report-type-card" data-type="compare">
-          <div class="type-icon">
-            <i data-lucide="git-compare"></i>
-          </div>
-          <h3 class="type-title">城市对比报告</h3>
-          <p class="type-desc">多城市横向对比分析</p>
-        </div>
-        
-        <div class="report-type-card" data-type="investment">
-          <div class="type-icon">
-            <i data-lucide="piggy-bank"></i>
-          </div>
-          <h3 class="type-title">投资价值报告</h3>
-          <p class="type-desc">房产投资回报率分析</p>
-          <span class="type-badge pro">Pro</span>
-        </div>
+        <!-- 动态加载报告类型 -->
+      </div>
+      
+      <!-- 生成报告按钮 -->
+      <div style="text-align: center; margin: 24px 0;">
+        <button class="btn btn-primary generate-btn">
+          <i data-lucide="file-plus"></i>
+          生成报告
+        </button>
       </div>
       
       <!-- 最新报告列表 -->
@@ -120,130 +96,20 @@
         </div>
         
         <div class="report-list">
-          <div class="report-item">
-            <div class="report-cover">
-              <i data-lucide="file-bar-chart"></i>
-            </div>
-            <div class="report-info">
-              <h4 class="report-title">2024年12月全国房价月度报告</h4>
-              <p class="report-meta">
-                <span><i data-lucide="calendar"></i> 2024-12-10</span>
-                <span><i data-lucide="eye"></i> 1,234 次查看</span>
-              </p>
-              <div class="report-tags">
-                <span class="tag tag-primary">月度报告</span>
-                <span class="tag">全国</span>
-              </div>
-            </div>
-            <div class="report-actions">
-              <button class="btn btn-primary btn-sm">
-                <i data-lucide="download"></i>
-                下载
-              </button>
-              <button class="btn btn-secondary btn-sm">
-                <i data-lucide="eye"></i>
-                预览
-              </button>
-            </div>
-          </div>
-          
-          <div class="report-item">
-            <div class="report-cover">
-              <i data-lucide="file-bar-chart"></i>
-            </div>
-            <div class="report-info">
-              <h4 class="report-title">北京市2024年Q4房产市场深度分析</h4>
-              <p class="report-meta">
-                <span><i data-lucide="calendar" style="width: 14px; height: 14px;"></i> 2024-12-08</span>
-                <span><i data-lucide="eye" style="width: 14px; height: 14px;"></i> 2,567 次查看</span>
-              </p>
-              <div class="report-tags">
-                <span class="tag tag-primary">季度报告</span>
-                <span class="tag">北京</span>
-              </div>
-            </div>
-            <div class="report-actions">
-              <button class="btn btn-primary btn-sm">
-                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
-                下载
-              </button>
-              <button class="btn btn-secondary btn-sm">
-                <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-                预览
-              </button>
-            </div>
-          </div>
-          
-          <div class="report-item">
-            <div class="report-cover">
-              <i data-lucide="file-bar-chart"></i>
-            </div>
-            <div class="report-info">
-              <h4 class="report-title">一线城市房价对比分析报告</h4>
-              <p class="report-meta">
-                <span><i data-lucide="calendar"></i> 2024-12-05</span>
-                <span><i data-lucide="eye"></i> 3,891 次查看</span>
-              </p>
-              <div class="report-tags">
-                <span class="tag tag-primary">对比分析</span>
-                <span class="tag">北上广深</span>
-              </div>
-            </div>
-            <div class="report-actions">
-              <button class="btn btn-primary btn-sm">
-                <i data-lucide="download"></i>
-                下载
-              </button>
-              <button class="btn btn-secondary btn-sm">
-                <i data-lucide="eye"></i>
-                预览
-              </button>
-            </div>
-          </div>
-          
-          <div class="report-item">
-            <div class="report-cover">
-              <i data-lucide="file-bar-chart"></i>
-            </div>
-            <div class="report-info">
-              <h4 class="report-title">2024年新一线城市投资价值报告</h4>
-              <p class="report-meta">
-                <span><i data-lucide="calendar" style="width: 14px; height: 14px;"></i> 2024-12-01</span>
-                <span><i data-lucide="eye" style="width: 14px; height: 14px;"></i> 5,123 次查看</span>
-              </p>
-              <div class="report-tags">
-                <span class="tag tag-warning">Pro</span>
-                <span class="tag">投资分析</span>
-              </div>
-            </div>
-            <div class="report-actions">
-              <button class="btn btn-primary btn-sm">
-                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
-                下载
-              </button>
-              <button class="btn btn-secondary btn-sm">
-                <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-                预览
-              </button>
-            </div>
-          </div>
+          <!-- 动态加载报告列表 -->
         </div>
       </div>
       
-      <!-- 生成自定义报告 -->
-      <div class="custom-report-section">
-        <div class="custom-report-card">
-          <div class="custom-icon">
-            <i data-lucide="wand-2"></i>
-          </div>
-          <div class="custom-content">
-            <h3>生成自定义报告</h3>
-            <p>选择城市、时间范围和分析维度，一键生成专属报告</p>
-          </div>
-          <button class="btn btn-primary btn-lg">
-            <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
-            创建报告
-          </button>
+      <!-- 我的报告 -->
+      <div class="report-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <i data-lucide="user"></i>
+            我的报告
+          </h2>
+        </div>
+        <div class="my-reports-list">
+          <!-- 动态加载我的报告 -->
         </div>
       </div>
       

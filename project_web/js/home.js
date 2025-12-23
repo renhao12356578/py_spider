@@ -167,6 +167,7 @@ async function loadRankingData(type = 'price') {
     rankingList.innerHTML = `
       <div class="loading">
         <div class="loading-spinner"></div>
+        <p class="loading-text">加载排行榜数据...</p>
       </div>
     `;
     

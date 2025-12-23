@@ -40,9 +40,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   // ========== 加载报告类型 ==========
   async function loadReportTypes() {
     try {
-      const types = await API.report.getTypes();
+      const response = await API.report.getTypes();
+      const types = response.types || response || [];
       const container = document.querySelector('.report-types');
-      if (!container || !types) return;
+      if (!container || !types || types.length === 0) return;
       
       let html = '';
       types.forEach((type, index) => {
@@ -85,48 +86,45 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!container) return;
     
     try {
-      container.innerHTML = '<div class="loading">加载中...</div>';
+      // 显示加载动画
+      container.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">加载报告列表...</p>
+        </div>
+      `;
       
-      const data = await API.report.getList({ page, limit });
+      const data = await API.report.getList({ page, page_size: limit });
+      const reportList = data.reports || data.list || [];
       
-      if (!data.list || data.list.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <i data-lucide="file-text" style="width: 48px; height: 48px; opacity: 0.3;"></i>
-            <p>暂无报告${isLoggedIn ? '，点击上方生成您的第一份报告' : ''}</p>
-          </div>
-        `;
-        lucide.createIcons();
+      if (!reportList || reportList.length === 0) {
+        container.innerHTML = '<div class="empty-state">暂无报告，点击上方生成第一份报告</div>';
         return;
       }
       
       let html = '';
-      data.list.forEach(report => {
-        const statusClass = {
-          'completed': 'success',
-          'generating': 'warning',
-          'failed': 'danger'
-        }[report.status] || '';
-        
-        const statusText = {
-          'completed': '已完成',
-          'generating': '生成中',
-          'failed': '失败'
-        }[report.status] || report.status;
-        
+      reportList.forEach(report => {
         html += `
           <div class="report-item" data-id="${report.id}">
-            <div class="report-info">
-              <h4>${report.title}</h4>
-              <p>${report.type_name || ''} · ${report.created_at || ''}</p>
+            <div class="report-cover">
+              ${report.cover_image ? 
+                `<img src="${report.cover_image}" alt="${report.title}">` : 
+                '<i data-lucide="file-text"></i>'
+              }
             </div>
-            <div class="report-status">
-              <span class="status-badge ${statusClass}">${statusText}</span>
+            <div class="report-content">
+              <h4 class="report-title">${report.title}</h4>
+              <p class="report-summary">${report.summary || '暂无摘要'}</p>
+              <div class="report-meta">
+                <span class="report-type">${report.type || '报告'}</span>
+                <span class="report-date">${report.created_at || '-'}</span>
+              </div>
             </div>
             <div class="report-actions">
-              ${report.status === 'completed' ? `
-                <button class="btn btn-primary btn-sm view-btn" data-id="${report.id}">查看</button>
-              ` : ''}
+              <button class="btn btn-primary btn-sm view-btn" data-id="${report.id}">
+                <i data-lucide="eye"></i>
+                查看
+              </button>
             </div>
           </div>
         `;
@@ -135,11 +133,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       container.innerHTML = html;
       lucide.createIcons();
       
-      // 绑定查看事件
+      // 绑定查看按钮
       container.querySelectorAll('.view-btn').forEach(btn => {
-        btn.addEventListener('click', async function() {
-          const id = this.dataset.id;
-          await viewReport(id);
+        btn.addEventListener('click', function() {
+          const reportId = this.dataset.id;
+          viewReport(reportId);
         });
       });
       
@@ -259,7 +257,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
           const result = await API.report.generate({
             type: selectedReportType,
-            params: {}
+            city: '北京',
+            districts: [],
+            date_range: { start: '', end: '' },
+            metrics: [],
+            format: 'pdf'
           });
           
           alert(`报告生成请求已提交！预计需要 ${result.estimated_time || 30} 秒`);
@@ -282,21 +284,18 @@ document.addEventListener('DOMContentLoaded', async function() {
   
   // ========== 加载我的报告 (仅登录用户) ==========
   async function loadMyReports() {
-    const container = document.querySelector('.my-reports');
-    const myReportsSection = document.querySelector('.my-reports-section');
-    
-    // ✅ 未登录用户：隐藏"我的报告"区域
-    if (!isLoggedIn) {
-      if (myReportsSection) {
-        myReportsSection.style.display = 'none';
-      }
-      return;
-    }
+    const container = document.querySelector('.my-reports-list');
     
     if (!container) return;
     
+    // ✅ 未登录用户：显示提示
+    if (!isLoggedIn) {
+      container.innerHTML = '<div class="empty-state">登录后查看我的报告</div>';
+      return;
+    }
+    
     try {
-      const data = await API.report.getMyReports({ page: 1, limit: 5 });
+      const data = await API.report.getMyReports({ page: 1, page_size: 5 });
       const reports = data.reports || data.list || [];
       
       if (!reports.length) {
@@ -354,8 +353,89 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   }
   
+  // ========== 加载静态报告 ==========
+  async function loadStaticReports() {
+    try {
+      const data = await API.report.getStaticReports();
+      const reports = data.reports || [];
+      
+      console.log('静态报告数据:', reports);
+      
+      if (reports.length === 0) {
+        console.log('没有静态报告');
+        return;
+      }
+      
+      // 找到第一个 report-section 作为插入点
+      const firstSection = document.querySelector('.report-section');
+      if (!firstSection) {
+        console.error('找不到 .report-section 元素');
+        return;
+      }
+      
+      // 创建静态报告区域
+      const staticSection = document.createElement('div');
+      staticSection.className = 'report-section static-reports-section';
+      staticSection.innerHTML = `
+        <div class="section-header">
+          <h2 class="section-title">
+            <i data-lucide="file-text"></i>
+            官方报告
+          </h2>
+        </div>
+        <div class="static-reports-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          ${reports.map(report => `
+            <div class="static-report-card" style="background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-md); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;">
+              <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 12px;">
+                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <i data-lucide="file-text" style="width: 24px; height: 24px; color: white;"></i>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <h4 style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; line-height: 1.4;">${report.title}</h4>
+                  <div style="display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-secondary);">
+                    <span><i data-lucide="calendar" style="width: 12px; height: 12px;"></i> ${report.created_at}</span>
+                    <span><i data-lucide="file" style="width: 12px; height: 12px;"></i> ${report.size_mb} MB</span>
+                  </div>
+                </div>
+              </div>
+              <a href="${API.report.downloadStaticReport(report.filename)}" 
+                 class="btn btn-primary btn-sm btn-block" 
+                 style="margin-top: 12px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                 download>
+                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+                下载报告
+              </a>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      // 插入到第一个 report-section 之前
+      firstSection.parentNode.insertBefore(staticSection, firstSection);
+      lucide.createIcons();
+      
+      // 添加悬停效果
+      document.querySelectorAll('.static-report-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-4px)';
+          this.style.boxShadow = 'var(--shadow-lg)';
+        });
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = 'var(--shadow-md)';
+        });
+      });
+      
+      console.log('静态报告加载成功');
+      
+    } catch (error) {
+      console.error('加载静态报告失败:', error);
+    }
+  }
+  
   // ========== 初始化加载 ==========
   loadReportTypes();
+  loadStaticReports();
   loadReportList();
   loadMyReports();
   loadDataUpdateTime();

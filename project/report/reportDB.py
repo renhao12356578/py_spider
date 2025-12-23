@@ -522,3 +522,171 @@ class ReportDatabase:
             if connection:
                 cursor.close()
                 connection.close()
+    def get_report_types(self) -> List[Dict]:
+        """获取报告类型列表"""
+        return [
+            {"id": "market_analysis", "name": "市场趋势报告", "description": "全国及重点城市房价趋势分析", "icon": "trending-up"},
+            {"id": "district_analysis", "name": "城市分析报告", "description": "单一城市深度市场分析", "icon": "map-pin"},
+            {"id": "comparison", "name": "城市对比报告", "description": "多城市横向对比分析", "icon": "git-compare"},
+            {"id": "investment", "name": "投资价值报告", "description": "房产投资回报率分析", "icon": "dollar-sign"},
+            {"id": "monthly", "name": "月度报告", "description": "月度市场动态总结", "icon": "calendar"},
+            {"id": "quarterly", "name": "季度报告", "description": "季度市场趋势分析", "icon": "bar-chart-2"},
+            {"id": "annual", "name": "年度报告", "description": "年度市场全景回顾", "icon": "file-bar-chart"}
+        ]
+
+    def get_report_detail(self, report_id: int) -> Dict:
+        """获取报告详情"""
+        connection = get_db_connection()
+        if not connection:
+            return None
+        try:
+            cursor = connection.cursor(pymysql.cursors.DictCursor)
+            cursor.execute("""
+                SELECT id, title, summary, type, city, status,
+                       created_at, updated_at, cover_image_path, txt_path
+                FROM reports WHERE id = %s
+            """, (report_id,))
+            report = cursor.fetchone()
+            if not report:
+                return None
+            content = ''
+            txt_path = report.get('txt_path')
+            if txt_path:
+                if not os.path.isabs(txt_path):
+                    txt_path = os.path.join(os.path.dirname(__file__), txt_path)
+                if os.path.exists(txt_path):
+                    try:
+                        with open(txt_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                    except Exception as e:
+                        print(f"读取报告文件失败: {e}")
+            if not content:
+                content = report.get('summary', '暂无内容')
+            cursor.close()
+            connection.close()
+            return {
+                "id": report['id'],
+                "title": report['title'],
+                "summary": report['summary'],
+                "content": content,
+                "type": report['type'],
+                "city": report['city'],
+                "status": report['status'] or 'completed',
+                "created_at": report['created_at'].strftime('%Y-%m-%d %H:%M:%S') if report['created_at'] else None,
+                "updated_at": report['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if report['updated_at'] else None,
+                "cover_image": report['cover_image_path']
+            }
+        except Exception as e:
+            print(f"获取报告详情失败: {e}")
+            if connection:
+                connection.close()
+            return None
+
+    def get_reports_list(self, report_type: str = None, city: str = None, page: int = 1, page_size: int = 10) -> Dict:
+        """获取报告列表"""
+        connection = get_db_connection()
+        if not connection:
+            return {"reports": [], "total": 0}
+        try:
+            cursor = connection.cursor(pymysql.cursors.DictCursor)
+            where_conditions = []
+            params = []
+            if report_type:
+                where_conditions.append("type = %s")
+                params.append(report_type)
+            if city:
+                where_conditions.append("city = %s")
+                params.append(city)
+            where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+            cursor.execute(f"SELECT COUNT(*) as total FROM reports WHERE {where_clause}", params)
+            total = cursor.fetchone()['total']
+            offset = (page - 1) * page_size
+            cursor.execute(f"""
+                SELECT id, title, summary, type, city, status, created_at, updated_at, cover_image_path
+                FROM reports WHERE {where_clause}
+                ORDER BY created_at DESC LIMIT %s OFFSET %s
+            """, params + [page_size, offset])
+            reports = cursor.fetchall()
+            formatted_reports = []
+            for report in reports:
+                formatted_reports.append({
+                    "id": report['id'],
+                    "title": report['title'],
+                    "summary": report['summary'],
+                    "type": report['type'],
+                    "city": report['city'],
+                    "status": report['status'] or 'completed',
+                    "ai_generated": False,
+                    "created_at": report['created_at'].strftime('%Y-%m-%d %H:%M:%S') if report['created_at'] else None,
+                    "updated_at": report['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if report['updated_at'] else None,
+                    "cover_image": report['cover_image_path']
+                })
+            cursor.close()
+            connection.close()
+            return {"reports": formatted_reports, "total": total, "page": page, "page_size": page_size}
+        except Exception as e:
+            print(f"获取报告列表失败: {e}")
+            if connection:
+                connection.close()
+            return {"reports": [], "total": 0}
+
+    def create_custom_report(self, params: Dict) -> Dict:
+        """创建自定义报告"""
+        try:
+            report_type = params.get('type', '自定义报告')
+            city = params.get('city', '')
+            user_id = params.get('user_id')
+            title = f"{city}{report_type}"
+            summary = f"本报告分析了{city}地区的房产市场数据"
+            content = f"# {title}\n\n## 报告摘要\n{summary}\n\n## 结论\n\n根据以上数据分析，{city}地区房产市场呈现稳定发展态势。"
+            result = self.create_report_with_ai_support(
+                title=title,
+                summary=summary,
+                content=content,
+                report_type=report_type,
+                city=city,
+                user_id=user_id,
+                generate_image=False
+            )
+            if result.get('success'):
+                return {'report_id': result['report_id'], 'title': title, 'status': 'completed', 'format': 'pdf'}
+            else:
+                raise Exception(result.get('error', '创建失败'))
+        except Exception as e:
+            raise Exception(f"创建自定义报告失败: {str(e)}")
+
+    def get_user_reports(self, user_id: str, page: int = 1, page_size: int = 10) -> List[Dict]:
+        """获取用户的报告列表"""
+        connection = get_db_connection()
+        if not connection:
+            return []
+        try:
+            cursor = connection.cursor(pymysql.cursors.DictCursor)
+            offset = (page - 1) * page_size
+            cursor.execute("""
+                SELECT id, title, summary, type, city, status, created_at, updated_at, cover_image_path
+                FROM reports WHERE user_id = %s
+                ORDER BY created_at DESC LIMIT %s OFFSET %s
+            """, (user_id, page_size, offset))
+            reports = cursor.fetchall()
+            formatted_reports = []
+            for report in reports:
+                formatted_reports.append({
+                    "id": report['id'],
+                    "title": report['title'],
+                    "summary": report['summary'],
+                    "type": report['type'],
+                    "city": report['city'],
+                    "status": report['status'] or 'completed',
+                    "created_at": report['created_at'].strftime('%Y-%m-%d %H:%M:%S') if report['created_at'] else None,
+                    "updated_at": report['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if report['updated_at'] else None,
+                    "cover_image": report['cover_image_path']
+                })
+            cursor.close()
+            connection.close()
+            return formatted_reports
+        except Exception as e:
+            print(f"获取用户报告失败: {e}")
+            if connection:
+                connection.close()
+            return []

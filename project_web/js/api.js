@@ -546,6 +546,22 @@ const API = {
      */
     deleteReport(reportId) {
       return API.request(`/reports/${reportId}`, { method: 'DELETE' });
+    },
+    
+    /**
+     * 获取静态报告列表
+     * GET /api/reports/static
+     */
+    getStaticReports() {
+      return API.get('/reports/static');
+    },
+    
+    /**
+     * 下载静态报告
+     * GET /api/reports/static/download/:filename
+     */
+    downloadStaticReport(filename) {
+      return `${API.BASE_URL}/reports/static/download/${encodeURIComponent(filename)}`;
     }
   },
   

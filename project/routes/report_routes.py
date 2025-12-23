@@ -546,3 +546,92 @@ def download_report(filename):
             "code": 500,
             "message": f"下载失败: {str(e)}"
         }), 500
+
+
+# ============ 静态报告 ============
+
+@reports_bp.route('/static', methods=['GET'])
+def get_static_reports():
+    """获取静态报告列表（down目录中的PDF文件）"""
+    try:
+        # 使用绝对路径
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        static_dir = os.path.join(base_dir, 'report', 'down')
+        print(f"基础目录: {base_dir}")
+        print(f"静态报告目录: {static_dir}")
+        print(f"目录是否存在: {os.path.exists(static_dir)}")
+        
+        if not os.path.exists(static_dir):
+            print("静态报告目录不存在")
+            return jsonify({
+                "code": 200,
+                "data": {"reports": []}
+            })
+        
+        reports = []
+        files = os.listdir(static_dir)
+        print(f"目录中的文件: {files}")
+        
+        for filename in files:
+            if filename.endswith('.pdf'):
+                filepath = os.path.join(static_dir, filename)
+                file_stat = os.stat(filepath)
+                
+                title = filename.replace('.pdf', '')
+                
+                report = {
+                    "id": f"static_{len(reports)}",
+                    "title": title,
+                    "filename": filename,
+                    "type": "官方报告",
+                    "size": file_stat.st_size,
+                    "size_mb": round(file_stat.st_size / (1024 * 1024), 2),
+                    "created_at": datetime.fromtimestamp(file_stat.st_ctime).strftime('%Y-%m-%d'),
+                    "status": "completed",
+                    "is_static": True
+                }
+                reports.append(report)
+                print(f"添加静态报告: {report['title']}")
+        
+        print(f"共找到 {len(reports)} 个静态报告")
+        
+        return jsonify({
+            "code": 200,
+            "data": {"reports": reports, "total": len(reports)}
+        })
+        
+    except Exception as e:
+        print(f"获取静态报告失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "code": 500,
+            "message": f"获取静态报告失败: {str(e)}"
+        }), 500
+
+
+@reports_bp.route('/static/download/<filename>', methods=['GET'])
+def download_static_report(filename):
+    """下载静态报告文件（无需认证）"""
+    try:
+        safe_filename = os.path.basename(filename)
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        filepath = os.path.join(base_dir, 'report', 'down', safe_filename)
+
+        if not os.path.exists(filepath):
+            return jsonify({
+                "code": 404,
+                "message": "文件不存在"
+            }), 404
+
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=safe_filename
+        )
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"下载失败: {str(e)}"
+        }), 500
