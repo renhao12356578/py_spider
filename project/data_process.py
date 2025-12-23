@@ -177,18 +177,11 @@ def get_national_overview() -> str:
 def get_city_prices(province: str, min_price: Optional[int] = None, max_price: Optional[int] = None) -> str:
     """
     实现GET /api/national/city-prices
-    获取指定省份的城市房价及区县数据（使用current_price表）
-    :param province: 筛选省份（必填）
+    获取城市房价及区县数据（使用current_price表）
+    :param province: 筛选省份（可选，如果为空则返回全国数据）
     :param min_price: 最低城市均价（可选）
     :param max_price: 最高城市均价（可选）
     """
-    if not province or not province.strip():
-        return json.dumps({
-            "code": 400,
-            "data": {},
-            "message": "province参数为必填项"
-        }, ensure_ascii=False)
-
     connection = get_db_connection()
     if not connection:
         return json.dumps({
@@ -199,14 +192,31 @@ def get_city_prices(province: str, min_price: Optional[int] = None, max_price: O
 
     try:
         cursor = connection.cursor(pymysql.cursors.DictCursor)
+        
+        print(f"🔍 [DEBUG] 开始查询城市房价数据:")
+        print(f"    省份: {province if province and province.strip() else '全国'}")
+        print(f"    最低价: {min_price}")
+        print(f"    最高价: {max_price}")
 
-        # 构建查询条件
-        where_conditions = [f"province_name LIKE '%{province.strip()}%'"]
+        # 构建查询条件（使用参数化查询）
+        where_conditions = []
+        query_params = []
+        
+        if province and province.strip():
+            where_conditions.append("province_name LIKE %s")
+            query_params.append(f"%{province.strip()}%")
+        
         if min_price is not None and min_price > 0:
-            where_conditions.append(f"city_avg_price >= {min_price}")
+            where_conditions.append("city_avg_price >= %s")
+            query_params.append(min_price)
         if max_price is not None and max_price > 0:
-            where_conditions.append(f"city_avg_price <= {max_price}")
-        where_clause = "WHERE " + " AND ".join(where_conditions)
+            where_conditions.append("city_avg_price <= %s")
+            query_params.append(max_price)
+        
+        where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        print(f"🔍 [DEBUG] SQL WHERE子句: {where_clause}")
+        print(f"🔍 [DEBUG] 查询参数: {query_params}")
 
         # 1. 查询城市列表（去重）
         city_query = f"""
@@ -221,24 +231,29 @@ def get_city_prices(province: str, min_price: Optional[int] = None, max_price: O
         {where_clause}
         ORDER BY city_avg_price DESC
         """
-        cursor.execute(city_query)
+        
+        cursor.execute(city_query, tuple(query_params))
         cities = cursor.fetchall()
+        
+        print(f"🔍 [DEBUG] 查询到 {len(cities)} 个城市")
 
         # 2. 为每个城市查询对应的区县数据
         result_cities = []
         for city in cities:
             city_name = city['city_name']
+            province_name = city['province_name']
+            
             # 查询该城市的区县数据
-            district_query = f"""
+            district_query = """
             SELECT
                 district_name,
                 district_avg_price,
                 district_ratio
             FROM current_price
-            WHERE city_name = %s
+            WHERE city_name = %s AND province_name = %s
             ORDER BY district_avg_price DESC
             """
-            cursor.execute(district_query, (city_name,))
+            cursor.execute(district_query, (city_name, province_name))
             districts = cursor.fetchall()
 
             # 格式化区县数据
@@ -246,32 +261,43 @@ def get_city_prices(province: str, min_price: Optional[int] = None, max_price: O
             for district in districts:
                 formatted_districts.append({
                     "district_name": district['district_name'],
-                    "district_avg_price": int(district['district_avg_price']),
-                    "district_ratio": round(district['district_ratio'], 1) if district['district_ratio'] else 0.0
+                    "district_avg_price": int(district['district_avg_price']) if district['district_avg_price'] else 0,
+                    "district_ratio": round(float(district['district_ratio']), 1) if district['district_ratio'] else 0.0
                 })
 
             # 格式化城市数据
             result_cities.append({
                 "province_name": city['province_name'],
                 "city_name": city['city_name'],
-                "city_avg_price": int(city['city_avg_price']),
-                "city_avg_total_price": int(city['city_avg_total_price']),
-                "price_rent_ratio": int(city['price_rent_ratio']),
-                "listing_count": int(city['listing_count']),
+                "city_avg_price": int(city['city_avg_price']) if city['city_avg_price'] else 0,
+                "city_avg_total_price": int(city['city_avg_total_price']) if city['city_avg_total_price'] else 0,
+                "price_rent_ratio": int(city['price_rent_ratio']) if city['price_rent_ratio'] else 0,
+                "listing_count": int(city['listing_count']) if city['listing_count'] else 0,
                 "districts": formatted_districts
             })
-
-        response = {
-            "code": 200,
-            "data": {"cities": result_cities}
-        }
+        
+        print(f"✅ [DEBUG] 成功处理 {len(result_cities)} 个城市的数据")
+        
+        # 如果没有查询到数据，返回空数组
+        if not result_cities:
+            response = {
+                "code": 200,
+                "data": {"cities": []}
+            }
+        else:
+            response = {
+                "code": 200,
+                "data": {"cities": result_cities}
+            }
 
         cursor.close()
         connection.close()
         return json.dumps(response, ensure_ascii=False)
 
     except Exception as e:
-        print(f"城市房价查询失败: {e}")
+        print(f"❌ [DEBUG] 城市房价查询失败: {e}")
+        import traceback
+        traceback.print_exc()
         return json.dumps({
             "code": 500,
             "data": {},
@@ -1309,6 +1335,7 @@ def query_houses_list(
     except Exception as e:
         print(f"房源列表查询失败: {e}")
         return json.dumps({"code": 500, "msg": f"查询失败: {str(e)}"})
+
 
 
 
