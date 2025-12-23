@@ -49,7 +49,7 @@ async function initPage() {
     loadCityPrices(),
     loadRankingData('price'),
     loadProvinces(),
-    loadTrendData()
+    loadTrendData("北京", "2025")
   ]);
 }
 
@@ -171,6 +171,7 @@ async function loadRankingData(type = 'price') {
     `;
     
     const data = await API.national.getRanking(type, 10);
+    //printf('加载排行榜数据:', data.ranking);
     
     // 渲染排行榜
     renderRankingList(data.ranking || [], type);
@@ -206,18 +207,20 @@ function renderRankingList(ranking, type) {
   
   let html = '';
   ranking.forEach((item, index) => {
-    const changeClass = item.change > 0 ? 'up' : (item.change < 0 ? 'down' : '');
-    const changeIcon = item.change > 0 ? 'trending-up' : (item.change < 0 ? 'trending-down' : 'minus');
-    
-    let valueDisplay = '';
-    let changeDisplay = '';
+    // ✅ 修复：根据 type 决定如何计算样式类
+    let changeClass, valueDisplay;
     
     if (type === 'price') {
+      // 房价排行：使用 item.change
+      changeClass = item.change > 0 ? 'up' : (item.change < 0 ? 'down' : '');
       valueDisplay = `${formatNumber(item.value)} 元/㎡`;
     } else if (type === 'change') {
+      // 涨幅排行：使用 item.value
+      changeClass = item.value > 0 ? 'up' : (item.value < 0 ? 'down' : '');
       valueDisplay = `${item.value > 0 ? '+' : ''}${item.value}%`;
-      changeClass = item.value > 0 ? 'up' : 'down';
     } else if (type === 'rent_ratio') {
+      // 租售比排行
+      changeClass = '';
       valueDisplay = `${item.value}`;
     }
     
@@ -229,7 +232,7 @@ function renderRankingList(ranking, type) {
           <div class="ranking-province">${item.province_name || ''}</div>
         </div>
         <div class="ranking-value">
-          <div class="ranking-price">${valueDisplay}</div>
+          <div class="ranking-price ${changeClass}">${valueDisplay}</div>
         </div>
         <button class="follow-btn" data-city="${item.city_name}" title="关注城市">
           <i data-lucide="star"></i>
@@ -338,9 +341,11 @@ async function loadProvinces() {
 /**
  * 加载趋势数据
  */
-async function loadTrendData(city = '') {
+async function loadTrendData(city = '', year = '') {
   try {
-    const data = await API.national.getTrend(city);
+    console.log('📈 加载趋势数据:', { city, year });
+    
+    const data = await API.national.getTrend(city, year);
     
     if (trendChart && data.trends) {
       const option = Charts.getTrendLineOption(data.trends);
@@ -389,9 +394,19 @@ function bindEvents() {
     }
   });
   
-  // 趋势图城市筛选
+  // ✅ 趋势图城市筛选
   document.getElementById('trendCityFilter')?.addEventListener('change', function() {
-    loadTrendData(this.value);
+    const city = this.value;
+    const year = document.getElementById('trendYearFilter')?.value || '';
+    loadTrendData(city, year);
+  });
+  
+  // ✅ 新增：趋势图年份筛选
+  document.getElementById('trendYearFilter')?.addEventListener('change', function() {
+    const city = document.getElementById('trendCityFilter')?.value || '';
+    const year = this.value;
+    console.log('🔍 切换年份:', year);
+    loadTrendData(city, year);
   });
   
   // 搜索功能

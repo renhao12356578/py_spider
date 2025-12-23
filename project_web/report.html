@@ -250,6 +250,79 @@
           </button>
         </div>
       </div>
+      
+      <!-- 报告详情区域 -->
+      <div class="report-detail" id="report-detail" style="display: none;">
+        <div class="detail-header">
+          <h2 class="detail-title">报告标题</h2>
+          <p class="detail-meta">
+            <span><i data-lucide="calendar"></i> 2024-12-10</span>
+            <span><i data-lucide="eye"></i> 1,234 次查看</span>
+          </p>
+        </div>
+        
+        <div class="detail-content">
+          <p>报告内容摘要，包含主要发现和数据指标。</p>
+          <div class="detail-chart" id="detail-chart" style="height: 400px;"></div>
+        </div>
+        
+        <div class="detail-actions">
+          <!-- ✅ 添加登录状态提示 -->
+          <button class="btn-favorite" id="btn-favorite">
+            <i class="fas fa-star"></i>
+            <span>收藏报告</span>
+          </button>
+          <button class="btn-share">
+            <i class="fas fa-share-alt"></i>
+            分享
+          </button
+          >
+          <!-- ✅ 未登录用户提示（初始隐藏） -->
+          <div class="login-hint" id="login-hint" style="display: none;">
+            <i class="fas fa-info-circle"></i>
+            <span>登录后可收藏报告并查看完整内容</span>
+            <a href="login.html">立即登录</a>
+          </div>
+        </div>
+        
+        <div class="detail-footer">
+          <button class="btn btn-secondary" id="backBtn">
+            <i data-lucide="arrow-left"></i>
+            返回报告列表
+          </button>
+        </div>
+      </div>
+      
+      <!-- 在报告类型选择区域后添加未登录提示 -->
+      <div class="report-types">
+        <!-- 报告类型卡片由 JS 动态生成 -->
+      </div>
+
+      <!-- ✅ 添加未登录用户功能提示 -->
+      <div class="guest-notice" id="guestNotice" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+          <div style="display: flex; align-items: center; gap: 15px;">
+              <i data-lucide="info" style="width: 24px; height: 24px; flex-shrink: 0;"></i>
+              <div style="flex: 1;">
+                  <h4 style="margin: 0 0 8px 0; font-size: 16px;">您正在以访客身份浏览</h4>
+                  <p style="margin: 0; opacity: 0.9; font-size: 14px;">登录后可生成自定义报告、收藏感兴趣的内容，并查看历史报告</p>
+              </div>
+              <a href="login.html" style="background: white; color: #667eea; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; white-space: nowrap; transition: transform 0.2s;">
+                  立即登录
+              </a>
+          </div>
+      </div>
+
+      <script>
+      // ✅ 根据登录状态显示/隐藏访客提示
+      document.addEventListener('DOMContentLoaded', function() {
+          const isLoggedIn = !!localStorage.getItem('token');
+          const guestNotice = document.getElementById('guestNotice');
+          
+          if (!isLoggedIn && guestNotice) {
+              guestNotice.style.display = 'block';
+          }
+      });
+      </script>
     </main>
     
     <!-- 页脚 -->

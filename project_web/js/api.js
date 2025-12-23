@@ -39,6 +39,7 @@ const API = {
     const token = localStorage.getItem('token');
 
     const config = {
+      method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
