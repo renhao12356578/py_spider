@@ -49,7 +49,7 @@ async function initPage() {
     loadCityPrices(),
     loadRankingData('price'),
     loadProvinces(),
-    loadTrendData("北京", "2025")
+    loadTrendData("", "2025")
   ]);
 }
 
@@ -234,9 +234,6 @@ function renderRankingList(ranking, type) {
         <div class="ranking-value">
           <div class="ranking-price ${changeClass}">${valueDisplay}</div>
         </div>
-        <button class="follow-btn" data-city="${item.city_name}" title="关注城市">
-          <i data-lucide="star"></i>
-        </button>
       </div>
     `;
   });
@@ -247,9 +244,6 @@ function renderRankingList(ranking, type) {
   // 绑定点击事件
   rankingList.querySelectorAll('.ranking-item').forEach(item => {
     item.addEventListener('click', function(e) {
-      // 如果点击的是关注按钮，不跳转
-      if (e.target.closest('.follow-btn')) return;
-      
       const city = this.dataset.city;
       if (city === '北京') {
         window.location.href = 'beijing.html';
@@ -257,30 +251,6 @@ function renderRankingList(ranking, type) {
     });
   });
   
-  // 绑定关注按钮事件
-  rankingList.querySelectorAll('.follow-btn').forEach(btn => {
-    btn.addEventListener('click', async function(e) {
-      e.stopPropagation();
-      const cityName = this.dataset.city;
-      
-      try {
-        if (this.classList.contains('active')) {
-          // 取消关注
-          await API.favorites.removeCity(cityName);
-          this.classList.remove('active');
-          showToast(`已取消关注 ${cityName}`, 'info');
-        } else {
-          // 添加关注
-          await API.favorites.addCity(cityName);
-          this.classList.add('active');
-          showToast(`已关注 ${cityName}`, 'success');
-        }
-      } catch (error) {
-        console.error('关注操作失败:', error);
-        showToast(error.message || '操作失败，请重试', 'error');
-      }
-    });
-  });
 }
 
 /**

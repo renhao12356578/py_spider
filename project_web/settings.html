@@ -40,10 +40,6 @@
             <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
             <span>数据报告</span>
           </a>
-          <a href="favorites.html" class="header-nav-item">
-            <i data-lucide="heart" style="width: 18px; height: 18px;"></i>
-            <span>我的收藏</span>
-          </a>
           <a href="settings.html" class="header-nav-item active">
             <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
             <span>设置</span>
@@ -114,24 +110,18 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label">昵称</label>
-                    <input type="text" class="form-input" placeholder="请输入昵称">
-                  </div>
-                </div>
-                
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">邮箱</label>
-                    <input type="email" class="form-input" placeholder="请输入邮箱">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">手机号</label>
-                    <input type="tel" class="form-input" placeholder="请输入手机号">
+                    <input type="text" class="form-input" name="nickname" placeholder="请输入昵称">
                   </div>
                 </div>
                 
                 <div class="form-group">
+                  <label class="form-label">邮箱</label>
+                  <input type="email" class="form-input" name="email" placeholder="请输入邮箱">
+                </div>
+                
+                <div class="form-group">
                   <label class="form-label">个人简介</label>
-                  <textarea class="form-input form-textarea" placeholder="介绍一下自己吧..."></textarea>
+                  <textarea class="form-input form-textarea" name="bio" placeholder="介绍一下自己吧..."></textarea>
                 </div>
                 
                 <div class="form-actions">
@@ -159,20 +149,7 @@
                     <p>定期更换密码可以保护账户安全</p>
                   </div>
                 </div>
-                <button class="btn btn-secondary btn-sm">修改</button>
-              </div>
-              
-              <div class="security-item">
-                <div class="security-info">
-                  <div class="security-icon">
-                    <i data-lucide="smartphone"></i>
-                  </div>
-                  <div>
-                    <h4>手机绑定</h4>
-                    <p>已绑定：138****8888</p>
-                  </div>
-                </div>
-                <button class="btn btn-secondary btn-sm">更换</button>
+                <button class="btn btn-secondary btn-sm" id="changePasswordBtn">修改</button>
               </div>
               
               <div class="security-item">
@@ -182,23 +159,10 @@
                   </div>
                   <div>
                     <h4>邮箱绑定</h4>
-                    <p>已绑定：ad***@example.com</p>
+                    <p id="emailBindInfo">未绑定</p>
                   </div>
                 </div>
-                <button class="btn btn-secondary btn-sm">更换</button>
-              </div>
-              
-              <div class="security-item">
-                <div class="security-info">
-                  <div class="security-icon warning">
-                    <i data-lucide="shield-check"></i>
-                  </div>
-                  <div>
-                    <h4>两步验证</h4>
-                    <p>未开启，开启后可提高账户安全性</p>
-                  </div>
-                </div>
-                <button class="btn btn-primary btn-sm">开启</button>
+                <button class="btn btn-secondary btn-sm" id="changeEmailBtn">更换</button>
               </div>
             </div>
           </section>
@@ -226,17 +190,6 @@
                 <div class="notification-info">
                   <h4>新报告发布</h4>
                   <p>有新的市场分析报告发布时通知您</p>
-                </div>
-                <label class="toggle">
-                  <input type="checkbox" checked>
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-              
-              <div class="notification-item">
-                <div class="notification-info">
-                  <h4>收藏房源更新</h4>
-                  <p>收藏的房源信息变动时通知您</p>
                 </div>
                 <label class="toggle">
                   <input type="checkbox" checked>

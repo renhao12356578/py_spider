@@ -27,27 +27,39 @@ document.addEventListener('DOMContentLoaded', async function() {
         const profile = await API.user.getProfile();            
         
         // 填充表单      
-        // 使用setAttribute的方式（安全，但通常value属性更好）
         const nicknameInput = document.querySelector('[name="nickname"]');
         if (nicknameInput) nicknameInput.value = profile.nickname || '';
         
         const emailInput = document.querySelector('[name="email"]');
         if (emailInput) emailInput.value = profile.email || '';
         
-        const phoneInput = document.querySelector('[name="phone"]');
-        if (phoneInput) phoneInput.value = profile.phone || '';
-        
-        const bioInput = document.querySelector('[name="bio"]');  // 第33行修正
+        const bioInput = document.querySelector('[name="bio"]');
         if (bioInput) bioInput.value = profile.bio || '';
         
         // 显示用户名      
         const usernameInput = document.querySelector('.profile-form input[readonly]');      
-        if (usernameInput) usernameInput.value = profile.username || '';      
+        if (usernameInput) usernameInput.value = profile.username || '';
+        
+        // 更新邮箱绑定信息
+        const emailBindInfo = document.getElementById('emailBindInfo');
+        if (emailBindInfo && profile.email) {
+          emailBindInfo.textContent = `已绑定：${maskEmail(profile.email)}`;
+        }
         
     } catch (error) {      
         console.error('加载用户资料失败:', error);
     }
 }
+  
+  // 邮箱脱敏
+  function maskEmail(email) {
+    if (!email) return '';
+    const [username, domain] = email.split('@');
+    if (username.length <= 3) {
+      return `${username[0]}***@${domain}`;
+    }
+    return `${username.slice(0, 2)}***${username.slice(-1)}@${domain}`;
+  }
   
   // ========== 保存用户资料 ==========
   const profileForm = document.querySelector('.profile-form');
@@ -63,7 +75,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       await API.user.updateProfile({
         nickname: formData.get('nickname'),
         email: formData.get('email'),
-        phone: formData.get('phone'),
         bio: formData.get('bio')
       });
       
@@ -77,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
   
   // ========== 修改密码 ==========
-  const changePasswordBtn = document.querySelector('.security-item .btn');
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
   changePasswordBtn?.addEventListener('click', async function() {
     const oldPassword = prompt('请输入当前密码:');
     if (!oldPassword) return;
@@ -100,6 +111,28 @@ document.addEventListener('DOMContentLoaded', async function() {
       Auth.logout();
     } catch (error) {
       alert(error.message || '密码修改失败');
+    }
+  });
+  
+  // ========== 更换邮箱 ==========
+  const changeEmailBtn = document.getElementById('changeEmailBtn');
+  changeEmailBtn?.addEventListener('click', async function() {
+    const newEmail = prompt('请输入新邮箱地址:');
+    if (!newEmail) return;
+    
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      alert('请输入正确的邮箱格式');
+      return;
+    }
+    
+    try {
+      await API.user.updateProfile({ email: newEmail });
+      alert('邮箱更换成功！');
+      loadProfile(); // 重新加载资料
+    } catch (error) {
+      alert(error.message || '邮箱更换失败');
     }
   });
   

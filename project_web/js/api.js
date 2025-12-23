@@ -141,15 +141,6 @@ const API = {
     if (endpoint === '/user/notifications/settings' && options.method === 'PUT') return { message: '设置已保存' };
     if (endpoint.startsWith('/user/notifications')) return MockData.user.notifications;
     
-    // 收藏模块
-    if (endpoint.startsWith('/favorites/houses') && (!options.method || options.method === 'GET')) return MockData.favorites.houses;
-    if (endpoint === '/favorites/houses' && options.method === 'POST') return { favorite_id: Date.now(), message: '收藏成功' };
-    if (endpoint.startsWith('/favorites/houses/') && options.method === 'DELETE') return { message: '取消收藏成功' };
-    if (endpoint === '/favorites/cities' && (!options.method || options.method === 'GET')) return MockData.favorites.cities;
-    if (endpoint === '/favorites/cities' && options.method === 'POST') return { message: '关注成功' };
-    if (endpoint.startsWith('/favorites/cities/') && options.method === 'DELETE') return { message: '取消关注成功' };
-    if (endpoint.startsWith('/favorites/reports')) return MockData.favorites.reports;
-    
     // 报告模块
     if (endpoint === '/reports/types') return MockData.report.types;
     if (endpoint === '/reports' && (!options.method || options.method === 'GET')) return MockData.report.list;
@@ -201,8 +192,8 @@ const API = {
      * 用户注册
      * POST /api/auth/register
      */
-    register(data) {
-      return API.post('/auth/register', data);
+    register(username, password, phone = '', email = '') {
+      return API.post('/auth/register', { username, password, phone, email });
     },
     
     /**
@@ -502,84 +493,6 @@ const API = {
      */
     markNotificationRead(ids) {
       return API.post('/user/notifications/read', { ids });
-    }
-  },
-  
-  // ============================================
-  // 收藏模块
-  // ============================================
-  favorites: {
-    /**
-     * 获取收藏的房源列表
-     * GET /api/favorites/houses
-     */
-    getHouses(params = {}) {
-      return API.get('/favorites/houses', params);
-    },
-    
-    /**
-     * 添加房源收藏
-     * POST /api/favorites/houses
-     */
-    addHouse(houseId, note = '') {
-      return API.post('/favorites/houses', { house_id: houseId, note });
-    },
-    
-    /**
-     * 取消房源收藏
-     * DELETE /api/favorites/houses/:id
-     */
-    removeHouse(houseId) {
-      return API.request(`/favorites/houses/${houseId}`, { method: 'DELETE' });
-    },
-    
-    /**
-     * 获取关注的城市列表
-     * GET /api/favorites/cities
-     */
-    getCities() {
-      return API.get('/favorites/cities');
-    },
-    
-    /**
-     * 添加城市关注
-     * POST /api/favorites/cities
-     */
-    addCity(cityName) {
-      return API.post('/favorites/cities', { city_name: cityName });
-    },
-    
-    /**
-     * 取消城市关注
-     * DELETE /api/favorites/cities/:name
-     */
-    removeCity(cityName) {
-      return API.request(`/favorites/cities/${encodeURIComponent(cityName)}`, { method: 'DELETE' });
-    },
-    
-    /**
-     * 获取收藏的报告列表
-     * GET /api/favorites/reports
-     */
-    getReports(params = {}) {
-      return API.get('/favorites/reports', params);
-    },
-    
-    /**
-     * 添加报告收藏
-     * POST /api/favorites/reports
-     */
-    addReport(reportId) {
-      return API.post('/favorites/reports', { report_id: reportId });
-    },
-    
-    /**
-     * 取消报告收藏
-     * DELETE /api/favorites/reports/:id
-     */
-     
-    removeReport(reportId) {
-      return API.request(`/favorites/reports/${reportId}`, { method: 'DELETE' });
     }
   },
   

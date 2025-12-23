@@ -1,31 +1,23 @@
 # llm_service.py
 import json
-import base64
-import hashlib
-import hmac
-import ssl
-import websocket
 import threading
-from datetime import datetime
-from time import mktime
-from urllib.parse import urlparse, urlencode
 from typing import Dict, List, Optional
 import requests
 from PIL import Image, ImageDraw, ImageFont
 import io
 import os
+import sys
 
+# 添加项目根目录到路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from LLM.spark_client import SparkClient, call_spark_api
 
 class LLMAIService:
     """统一的AI服务类，集成多种AI功能"""
 
     def __init__(self):
-        # 星火大模型配置
-        self.spark_appid = "67e25832"
-        self.spark_api_secret = "YTEwMTFjNTFiMTdjY2Q5ZTdhMDNkZmNj"
-        self.spark_api_key = "32139567bbcfdbe2309c77f2403abd48"
-        self.spark_domain = "spark-x"
-        self.spark_url = "wss://spark-api.xf-yun.com/v1/x1"
+        # 使用统一的星火客户端
+        self.spark_client = SparkClient()
 
         # 图片生成API配置（可以使用不同的服务）
         self.image_api_url = "https://api.openai.com/v1/images/generations"
@@ -97,130 +89,7 @@ class LLMAIService:
 
     def _call_spark_api(self, prompt: str) -> str:
         """调用星火大模型API"""
-
-        class Ws_Param:
-            def __init__(self, APPID, APIKey, APISecret, Spark_url):
-                self.APPID = APPID
-                self.APIKey = APIKey
-                self.APISecret = APISecret
-                self.host = urlparse(Spark_url).netloc
-                self.path = urlparse(Spark_url).path
-                self.Spark_url = Spark_url
-
-            def create_url(self):
-                now = datetime.now()
-                date = self._format_date_time(mktime(now.timetuple()))
-
-                signature_origin = "host: " + self.host + "\n"
-                signature_origin += "date: " + date + "\n"
-                signature_origin += "GET " + self.path + " HTTP/1.1"
-
-                signature_sha = hmac.new(self.APISecret.encode('utf-8'),
-                                         signature_origin.encode('utf-8'),
-                                         digestmod=hashlib.sha256).digest()
-
-                signature_sha_base64 = base64.b64encode(signature_sha).decode(encoding='utf-8')
-
-                authorization_origin = f'api_key="{self.APIKey}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature_sha_base64}"'
-                authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode(encoding='utf-8')
-
-                v = {
-                    "authorization": authorization,
-                    "date": date,
-                    "host": self.host
-                }
-                url = self.Spark_url + '?' + urlencode(v)
-                return url
-
-            def _format_date_time(self, timestamp):
-                dt = datetime.fromtimestamp(timestamp)
-                return dt.strftime('%a, %d %b %Y %H:%M:%S GMT')
-
-        def gen_params(appid, domain, question):
-            data = {
-                "header": {
-                    "app_id": appid,
-                    "uid": "1234",
-                },
-                "parameter": {
-                    "chat": {
-                        "domain": domain,
-                        "temperature": 0.7,
-                        "max_tokens": 4096
-                    }
-                },
-                "payload": {
-                    "message": {
-                        "text": question
-                    }
-                }
-            }
-            return data
-
-        answer = ""
-
-        def on_message(ws, message):
-            nonlocal answer
-            data = json.loads(message)
-            code = data['header']['code']
-
-            if code != 0:
-                print(f'\n请求错误: {code}, {data}')
-                ws.close()
-            else:
-                choices = data["payload"]["choices"]
-                status = choices["status"]
-                content = choices["text"][0].get("content", "")
-
-                if content:
-                    answer += content
-
-                if status == 2:
-                    ws.close()
-
-        def on_error(ws, error):
-            print(f"\n❌ 连接错误: {error}")
-
-        def on_close(ws, one, two):
-            pass
-
-        def on_open(ws):
-            def run(*args):
-                data = json.dumps(gen_params(
-                    appid=ws.appid,
-                    domain=ws.domain,
-                    question=ws.question
-                ))
-                ws.send(data)
-
-            threading.Thread(target=run).start()
-
-        # 创建WebSocket连接
-        ws_param = Ws_Param(
-            self.spark_appid,
-            self.spark_api_key,
-            self.spark_api_secret,
-            self.spark_url
-        )
-
-        websocket.enableTrace(False)
-        ws_url = ws_param.create_url()
-
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_message=on_message,
-            on_error=on_error,
-            on_close=on_close,
-            on_open=on_open
-        )
-
-        ws.appid = self.spark_appid
-        ws.question = [{"role": "user", "content": prompt}]
-        ws.domain = self.spark_domain
-
-        ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
-
-        return answer
+        return self.spark_client.chat(prompt)
 
     def _extract_report_from_response(self, response: str) -> str:
         """从API响应中提取报告内容"""

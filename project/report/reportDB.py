@@ -6,30 +6,9 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from .ai_service import LLMAIService
 
-# 数据库配置保持不变
-DB_CONFIG = {
-    'host': "gateway01.eu-central-1.prod.aws.tidbcloud.com",
-    'port': 4000,
-    'user': "48pvdQxqqjLneBr.root",
-    'password': "o46hvbIhibN3tTPp",
-    'database': "python_project",
-    'ssl_ca': "C:/Users/xijun/tidb-ca.pem",
-    'ssl_verify_cert': True,
-    'ssl_verify_identity': True
-}
-
-
-def get_db_connection():
-    """获取数据库连接"""
-    try:
-        connection = pymysql.connect(**DB_CONFIG)
-        return connection
-    except Exception as e:
-        print(f"数据库连接失败: {e}")
-        return None
-import sys
-sys.path.append("..") #相对路径或绝对路径
-from LLM.use_data import get_area_statistics
+# 使用系统连接池
+from utils.database import get_db_connection
+from tools.house_query import get_area_statistics
 
 class ReportDatabase:
     """报告数据库管理类"""

@@ -84,22 +84,17 @@
         <div class="register-steps">
           <div class="step active" data-step="1">
             <div class="step-number">1</div>
-            <span class="step-label">基本信息</span>
+            <span class="step-label">填写信息</span>
           </div>
           <div class="step-line"></div>
           <div class="step" data-step="2">
             <div class="step-number">2</div>
-            <span class="step-label">安全设置</span>
-          </div>
-          <div class="step-line"></div>
-          <div class="step" data-step="3">
-            <div class="step-number">3</div>
             <span class="step-label">完成注册</span>
           </div>
         </div>
         
         <form class="login-form register-form" id="registerForm">
-          <!-- 步骤1: 基本信息 -->
+          <!-- 步骤1: 填写信息 -->
           <div class="form-step active" id="step1">
             <div class="form-group">
               <label class="form-label">用户名 <span class="required">*</span></label>
@@ -119,42 +114,22 @@
             </div>
             
             <div class="form-group">
-              <label class="form-label">手机号 <span class="required">*</span></label>
-              <div class="input-with-icon">
-                <i data-lucide="smartphone" class="input-icon"></i>
-                <input 
-                  type="tel" 
-                  class="form-input" 
-                  id="phone"
-                  placeholder="请输入手机号"
-                  autocomplete="tel"
-                  required
-                >
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label">邮箱</label>
+              <label class="form-label">邮箱 <span class="required">*</span></label>
               <div class="input-with-icon">
                 <i data-lucide="mail" class="input-icon"></i>
                 <input 
                   type="email" 
                   class="form-input" 
                   id="email"
-                  placeholder="请输入邮箱（选填）"
+                  placeholder="请输入邮箱"
                   autocomplete="email"
+                  required
                 >
+                <span class="input-status" id="emailStatus"></span>
               </div>
+              <div class="form-hint" id="emailHint"></div>
             </div>
             
-            <button type="button" class="login-btn" id="nextStep1">
-              <span>下一步</span>
-              <i data-lucide="arrow-right"></i>
-            </button>
-          </div>
-          
-          <!-- 步骤2: 安全设置 -->
-          <div class="form-step" id="step2">
             <div class="form-group">
               <label class="form-label">设置密码 <span class="required">*</span></label>
               <div class="input-with-icon">
@@ -194,37 +169,14 @@
               <div class="form-hint" id="confirmHint"></div>
             </div>
             
-            <div class="form-group">
-              <label class="form-label">验证码 <span class="required">*</span></label>
-              <div class="captcha-group">
-                <div class="input-with-icon captcha-input">
-                  <i data-lucide="message-square" class="input-icon"></i>
-                  <input 
-                    type="text" 
-                    class="form-input" 
-                    id="captcha"
-                    placeholder="请输入验证码"
-                    required
-                  >
-                </div>
-                <button type="button" class="captcha-btn" id="sendCaptcha">获取验证码</button>
-              </div>
-            </div>
-            
-            <div class="form-buttons">
-              <button type="button" class="btn btn-secondary" id="prevStep2">
-                <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
-                <span>上一步</span>
-              </button>
-              <button type="button" class="login-btn flex-1" id="nextStep2">
-                <span>下一步</span>
-                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-              </button>
-            </div>
+            <button type="button" class="login-btn" id="nextStep1">
+              <span>下一步</span>
+              <i data-lucide="arrow-right"></i>
+            </button>
           </div>
           
-          <!-- 步骤3: 完成注册 -->
-          <div class="form-step" id="step3">
+          <!-- 步骤2: 完成注册 -->
+          <div class="form-step" id="step2">
             <div class="register-summary">
               <div class="summary-icon">
                 <i data-lucide="user-check"></i>
@@ -234,10 +186,6 @@
                 <div class="summary-item">
                   <span class="summary-label">用户名</span>
                   <span class="summary-value" id="summaryUsername">-</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">手机号</span>
-                  <span class="summary-value" id="summaryPhone">-</span>
                 </div>
                 <div class="summary-item">
                   <span class="summary-label">邮箱</span>
@@ -255,7 +203,7 @@
             </div>
             
             <div class="form-buttons">
-              <button type="button" class="btn btn-secondary" id="prevStep3">
+              <button type="button" class="btn btn-secondary" id="prevStep2">
                 <i data-lucide="arrow-left"></i>
                 <span>上一步</span>
               </button>
@@ -266,21 +214,6 @@
             </div>
           </div>
         </form>
-        
-        <div class="login-divider">
-          <span>或使用以下方式注册</span>
-        </div>
-        
-        <div class="social-login">
-          <button class="social-btn">
-            <i data-lucide="smartphone" class="social-icon"></i>
-            <span>微信注册</span>
-          </button>
-          <button class="social-btn">
-            <i data-lucide="scan" class="social-icon"></i>
-            <span>支付宝注册</span>
-          </button>
-        </div>
         
         <div class="login-footer">
           <p>已有账户？<a href="login.html">立即登录</a></p>

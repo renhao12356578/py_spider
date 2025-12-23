@@ -33,31 +33,50 @@ const Charts = {
     '#fb923c'  // 橘
   ],
   
-  // 地图颜色分级
-  mapColors: ['#d4e4fc', '#85b8f8', '#4d94f5', '#2563eb', '#1e40af'],
+  // 地图颜色分级（高对比度，适应国内房价）
+  mapColors: ['#e8f5e9', '#a5d6a7', '#fff176', '#ffb74d', '#ef5350', '#b71c1c'],
   
   /**
    * 获取房价对应的颜色等级
    */
   getPriceColorIndex(price) {
-    if (price < 10000) return 0;
-    if (price < 20000) return 1;
-    if (price < 30000) return 2;
-    if (price < 50000) return 3;
-    return 4;
+    if (price < 6000) return 0;   // 浅绿 - 低价
+    if (price < 10000) return 1;  // 绿色 - 偏低
+    if (price < 15000) return 2;  // 黄色 - 中等
+    if (price < 22000) return 3;  // 橙色 - 偏高
+    if (price < 30000) return 4;  // 红色 - 高价
+    return 5;                      // 深红 - 极高
   },
   
   /**
    * 中国地图配置
    */
   getChinaMapOption(data) {
-    // 处理数据格式
-    const mapData = data.map(item => ({
-      name: item.province_name || item.city_name,
-      value: item.city_avg_price,
-      city_name: item.city_name,
-      total_price: item.city_avg_total_price,
-      listing_count: item.listing_count
+    // 按省份聚合数据
+    const provinceMap = {};
+    data.forEach(item => {
+      const province = item.province_name;
+      if (!provinceMap[province]) {
+        provinceMap[province] = {
+          totalPrice: 0,
+          totalListing: 0,
+          count: 0,
+          cities: []
+        };
+      }
+      provinceMap[province].totalPrice += item.city_avg_price * item.listing_count;
+      provinceMap[province].totalListing += item.listing_count;
+      provinceMap[province].count++;
+      provinceMap[province].cities.push(item.city_name);
+    });
+    
+    // 转换为地图数据格式
+    const mapData = Object.entries(provinceMap).map(([province, info]) => ({
+      name: province,
+      value: info.totalListing > 0 ? Math.round(info.totalPrice / info.totalListing) : 0,
+      listing_count: info.totalListing,
+      city_count: info.count,
+      cities: info.cities.slice(0, 5).join('、')
     }));
     
     return {
@@ -74,28 +93,33 @@ const Charts = {
         formatter: function(params) {
           if (!params.data) return params.name + '<br/>暂无数据';
           return `
-            <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${params.data.city_name || params.name}</div>
+            <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${params.name}</div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
               <span style="color: #6b7280;">均价</span>
               <span style="font-weight: 600; color: #2563eb;">${params.data.value?.toLocaleString() || '--'} 元/㎡</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span style="color: #6b7280;">平均总价</span>
-              <span style="font-weight: 600;">${params.data.total_price || '--'} 万</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
               <span style="color: #6b7280;">挂牌数</span>
               <span style="font-weight: 600;">${params.data.listing_count?.toLocaleString() || '--'} 套</span>
             </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: #6b7280;">城市数</span>
+              <span style="font-weight: 600;">${params.data.city_count || '--'} 个</span>
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">${params.data.cities || ''}</div>
           `;
         }
       },
       visualMap: {
         min: 0,
-        max: 80000,
+        max: 35000,
         left: 'left',
         top: 'bottom',
-        show: false,
+        show: true,
+        text: ['高', '低'],
+        textStyle: {
+          color: '#6b7280'
+        },
         inRange: {
           color: this.mapColors
         },
@@ -107,10 +131,11 @@ const Charts = {
         map: 'china',
         roam: true,
         scaleLimit: {
-          min: 0.8,
+          min: 1,
           max: 3
         },
-        zoom: 1.2,
+        zoom: 1.25,
+        center: [105, 36],
         label: {
           show: true,
           fontSize: 10,
@@ -140,11 +165,54 @@ const Charts = {
   },
   
   /**
-   * 趋势折线图配置
+   * 趋势折线图配置 - 支持真实数据和多种预测数据
    */
   getTrendLineOption(data, title = '房价趋势') {
-    const months = data.map(item => `${item.month}月`);
-    const prices = data.map(item => item.avg_price);
+    // 分离真实数据和预测数据
+    const existData = data.filter(item => item.predict === 'exist');
+    const predictMethods = [...new Set(data.filter(item => item.predict !== 'exist').map(item => item.predict))];
+    
+    const months = data.map(item => `${item.year}-${item.month}月`);
+    const uniqueMonths = [...new Set(months)];
+    
+    // 构建系列数据
+    const series = [];
+    
+    // 真实数据系列
+    if (existData.length > 0) {
+      series.push({
+        name: '真实房价',
+        type: 'line',
+        smooth: 0.6,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { color: this.colors.primary, width: 2 },
+        itemStyle: { color: this.colors.primary },
+        data: uniqueMonths.map(m => {
+          const item = existData.find(d => `${d.year}-${d.month}月` === m);
+          return item ? item.avg_price : null;
+        })
+      });
+    }
+    
+    // 预测数据系列（不同颜色）
+    const predictColors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    predictMethods.forEach((method, idx) => {
+      const methodData = data.filter(item => item.predict === method);
+      series.push({
+        name: method,
+        type: 'line',
+        smooth: 0.6,
+        symbol: 'diamond',
+        symbolSize: 6,
+        lineStyle: { color: predictColors[idx % 4], width: 2, type: 'dashed' },
+        itemStyle: { color: predictColors[idx % 4] },
+        data: uniqueMonths.map(m => {
+          const item = methodData.find(d => `${d.year}-${d.month}月` === m);
+          return item ? item.avg_price : null;
+        })
+      });
+    });
     
     return {
       tooltip: {
@@ -153,20 +221,12 @@ const Charts = {
         borderColor: '#e5e7eb',
         borderWidth: 1,
         padding: [12, 16],
-        textStyle: {
-          color: '#1f2937'
-        },
-        formatter: function(params) {
-          const data = params[0];
-          return `
-            <div style="font-weight: 600; margin-bottom: 8px;">${data.name}</div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="width: 10px; height: 10px; background: ${Charts.colors.primary}; border-radius: 50%;"></span>
-              <span style="color: #6b7280;">均价</span>
-              <span style="font-weight: 600; color: #2563eb; margin-left: auto;">${data.value?.toLocaleString()} 元/㎡</span>
-            </div>
-          `;
-        }
+        textStyle: { color: '#1f2937' }
+      },
+      legend: {
+        show: predictMethods.length > 0,
+        bottom: 0,
+        textStyle: { fontSize: 11 }
       },
       grid: {
         left: '3%',
@@ -177,67 +237,23 @@ const Charts = {
       },
       xAxis: {
         type: 'category',
-        data: months,
-        axisLine: {
-          lineStyle: {
-            color: '#e5e7eb'
-          }
-        },
-        axisLabel: {
-          color: '#6b7280',
-          fontSize: 12
-        },
-        axisTick: {
-          show: false
-        }
+        data: uniqueMonths,
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        axisLabel: { color: '#6b7280', fontSize: 11, rotate: 45 },
+        axisTick: { show: false }
       },
       yAxis: {
         type: 'value',
-        axisLine: {
-          show: false
-        },
+        axisLine: { show: false },
+        scale: true,
         axisLabel: {
           color: '#6b7280',
           fontSize: 12,
-          formatter: value => (value / 10000).toFixed(1) + '万'
+          formatter: value => (value / 10000).toFixed(4) + '万'
         },
-        splitLine: {
-          lineStyle: {
-            color: '#f3f4f6',
-            type: 'dashed'
-          }
-        }
+        splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
       },
-      series: [{
-        name: '房价',
-        type: 'line',
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 8,
-        lineStyle: {
-          color: this.colors.primary,
-          width: 3
-        },
-        itemStyle: {
-          color: this.colors.primary,
-          borderColor: '#fff',
-          borderWidth: 2
-        },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(37, 99, 235, 0.3)' },
-              { offset: 1, color: 'rgba(37, 99, 235, 0.05)' }
-            ]
-          }
-        },
-        data: prices
-      }]
+      series: series
     };
   },
   

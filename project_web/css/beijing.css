@@ -570,6 +570,27 @@
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-md);
+  max-height: 600px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) var(--bg-secondary);
+}
+
+.recommend-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recommend-list::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 3px;
+}
+
+.recommend-list::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+}
+
+.recommend-list::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-hover);
 }
 
 .recommend-item {

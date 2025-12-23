@@ -1,5 +1,5 @@
 /**
- * 注册页面逻辑
+ * 注册页面逻辑 (简化版 - 仅支持用户名/邮箱/密码)
  * 房产数据分析系统
  */
 
@@ -21,19 +21,14 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 表单字段
   const usernameInput = document.getElementById('username');
-  const phoneInput = document.getElementById('phone');
   const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
   const confirmPasswordInput = document.getElementById('confirmPassword');
-  const captchaInput = document.getElementById('captcha');
   const agreeTerms = document.getElementById('agreeTerms');
   
   // 按钮
   const nextStep1 = document.getElementById('nextStep1');
-  const nextStep2 = document.getElementById('nextStep2');
   const prevStep2 = document.getElementById('prevStep2');
-  const prevStep3 = document.getElementById('prevStep3');
-  const sendCaptchaBtn = document.getElementById('sendCaptcha');
   const submitBtn = document.getElementById('submitBtn');
   
   // 密码显隐切换
@@ -81,8 +76,8 @@ document.addEventListener('DOMContentLoaded', function() {
       s.classList.toggle('active', index + 1 === step);
     });
     
-    // 如果是步骤3，更新摘要
-    if (step === 3) {
+    // 如果是步骤2，更新摘要
+    if (step === 2) {
       updateSummary();
     }
   }
@@ -90,14 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // 更新摘要信息
   function updateSummary() {
     document.getElementById('summaryUsername').textContent = usernameInput.value || '-';
-    document.getElementById('summaryPhone').textContent = maskPhone(phoneInput.value) || '-';
-    document.getElementById('summaryEmail').textContent = emailInput.value || '未填写';
-  }
-  
-  // 手机号脱敏
-  function maskPhone(phone) {
-    if (!phone || phone.length < 11) return phone;
-    return phone.slice(0, 3) + '****' + phone.slice(-4);
+    document.getElementById('summaryEmail').textContent = emailInput.value || '-';
   }
   
   // 显示错误
@@ -118,15 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
     return regex.test(username);
   }
   
-  // 验证手机号
-  function validatePhone(phone) {
-    const regex = /^1[3-9]\d{9}$/;
-    return regex.test(phone);
-  }
-  
   // 验证邮箱
   function validateEmail(email) {
-    if (!email) return true; // 选填
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   }
@@ -210,6 +191,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
+  // 邮箱实时验证（带防抖）
+  let emailCheckTimer = null;
+  emailInput?.addEventListener('input', async function() {
+    const status = document.getElementById('emailStatus');
+    const hint = document.getElementById('emailHint');
+    const value = this.value;
+    
+    // 清除之前的定时器
+    if (emailCheckTimer) clearTimeout(emailCheckTimer);
+    
+    if (value.length === 0) {
+      status.className = 'input-status';
+      hint.textContent = '';
+      hint.className = 'form-hint';
+    } else if (!validateEmail(value)) {
+      status.className = 'input-status invalid';
+      hint.textContent = '请输入正确的邮箱格式';
+      hint.className = 'form-hint error';
+    } else {
+      // 格式正确
+      status.className = 'input-status valid';
+      hint.textContent = '邮箱格式正确';
+      hint.className = 'form-hint success';
+    }
+  });
+  
   // 密码实时验证
   passwordInput?.addEventListener('input', function() {
     checkPasswordStrength(this.value);
@@ -234,68 +241,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // 手机号实时验证（带防抖）
-  let phoneCheckTimer = null;
-  phoneInput?.addEventListener('input', async function() {
-    const value = this.value;
-    
-    if (phoneCheckTimer) clearTimeout(phoneCheckTimer);
-    
-    if (value.length === 11 && validatePhone(value)) {
-      phoneCheckTimer = setTimeout(async () => {
-        try {
-          const result = await API.auth.checkPhone(value);
-          if (result.registered) {
-            showError('该手机号已注册，请直接登录');
-          }
-        } catch (error) {
-          // 忽略API错误
-        }
-      }, 500);
-    }
-  });
-  
-  // 发送验证码
-  let countdown = 0;
-  sendCaptchaBtn?.addEventListener('click', async function() {
-    if (countdown > 0) return;
-    
-    if (!validatePhone(phoneInput.value)) {
-      showError('请输入正确的手机号');
-      return;
-    }
-    
-    // 禁用按钮
-    this.disabled = true;
-    this.textContent = '发送中...';
-    
-    try {
-      // 调用发送验证码 API
-      await API.auth.sendCaptcha(phoneInput.value, 'register');
-      
-      // 开始倒计时
-      countdown = 60;
-      this.textContent = `${countdown}s 后重发`;
-      
-      const timer = setInterval(() => {
-        countdown--;
-        if (countdown <= 0) {
-          clearInterval(timer);
-          this.disabled = false;
-          this.textContent = '获取验证码';
-        } else {
-          this.textContent = `${countdown}s 后重发`;
-        }
-      }, 1000);
-      
-      hideError();
-    } catch (error) {
-      this.disabled = false;
-      this.textContent = '获取验证码';
-      showError(error.message || '验证码发送失败，请稍后重试');
-    }
-  });
-  
   // 步骤1验证
   nextStep1?.addEventListener('click', function() {
     hideError();
@@ -312,30 +257,17 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    if (!phoneInput.value.trim()) {
-      showError('请输入手机号');
-      phoneInput.focus();
-      return;
-    }
-    
-    if (!validatePhone(phoneInput.value)) {
-      showError('手机号格式不正确');
-      phoneInput.focus();
-      return;
-    }
-    
-    if (emailInput.value && !validateEmail(emailInput.value)) {
-      showError('邮箱格式不正确');
+    if (!emailInput.value.trim()) {
+      showError('请输入邮箱');
       emailInput.focus();
       return;
     }
     
-    goToStep(2);
-  });
-  
-  // 步骤2验证
-  nextStep2?.addEventListener('click', function() {
-    hideError();
+    if (!validateEmail(emailInput.value)) {
+      showError('邮箱格式不正确');
+      emailInput.focus();
+      return;
+    }
     
     if (!passwordInput.value) {
       showError('请设置密码');
@@ -361,18 +293,11 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    if (!captchaInput.value.trim()) {
-      showError('请输入验证码');
-      captchaInput.focus();
-      return;
-    }
-    
-    goToStep(3);
+    goToStep(2);
   });
   
   // 上一步
   prevStep2?.addEventListener('click', () => goToStep(1));
-  prevStep3?.addEventListener('click', () => goToStep(2));
   
   // 提交注册
   registerForm?.addEventListener('submit', async function(e) {
@@ -390,13 +315,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     try {
       // 调用注册 API
-      const result = await API.auth.register({
-        username: usernameInput.value.trim(),
-        phone: phoneInput.value.trim(),
-        email: emailInput.value.trim() || undefined,
-        password: passwordInput.value,
-        captcha: captchaInput.value.trim()
-      });
+      const result = await API.auth.register(
+        usernameInput.value.trim(),
+        passwordInput.value,
+        '', // phone - 不需要
+        emailInput.value.trim()
+      );
       
       // 显示成功提示
       registerSuccess.classList.remove('hidden');
@@ -416,8 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // 输入时隐藏错误
-  [usernameInput, phoneInput, emailInput, passwordInput, confirmPasswordInput, captchaInput].forEach(input => {
+  [usernameInput, emailInput, passwordInput, confirmPasswordInput].forEach(input => {
     input?.addEventListener('input', hideError);
   });
 });
-

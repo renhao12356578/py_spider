@@ -6,21 +6,31 @@
 """
 from flask import Flask, redirect
 from pathlib import Path
+import atexit
+
+# 导入工具函数
+from utils import init_db_pool, close_db_pool
 
 # 导入所有路由蓝图
-from report.report import reports_bp
+from routes.report_routes import reports_bp
 from routes import national_bp, beijing_bp, ai_bp
-from auth import auth_bp
-from user import user_bp
-from favorites import favorites_bp
+from routes.auth_routes import auth_bp
+from routes.user import user_bp
+from routes.favorites_routes import favorites_bp
 from routes.ai_routes import load_all_sessions
 
 
 # 创建Flask应用
 app = Flask(__name__, static_folder='../project_web', static_url_path='/project_web')
 
-#用于储存验证码
+# 用于储存验证码
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
+
+# 初始化数据库连接池（应用启动时执行一次）
+init_db_pool()
+
+# 注册应用关闭时的清理函数
+atexit.register(close_db_pool)
 
 # 注册所有蓝图
 app.register_blueprint(auth_bp)      # 认证路由: /api/auth/*

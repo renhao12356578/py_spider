@@ -310,8 +310,9 @@
 
 /* 地图容器 */
 .map-container {
-  height: 500px;
+  height: 450px;
   position: relative;
+  margin-bottom: 0;
 }
 
 .map-legend {

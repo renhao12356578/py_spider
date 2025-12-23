@@ -405,39 +405,6 @@ const MockData = {
   },
   
   // ============================================
-  // 收藏模块
-  // ============================================
-  favorites: {
-    // 收藏的房源
-    houses: {
-      total: 5,
-      page: 1,
-      houses: [
-        { favorite_id: 1, house_id: 1, total_price: 420, price_per_sqm: 52500, area: 80, layout: '2室1厅', district: '朝阳', note: '位置不错，考虑中', favorited_at: '2024-12-01T10:00:00Z', price_change: -5 },
-        { favorite_id: 2, house_id: 2, total_price: 380, price_per_sqm: 47500, area: 80, layout: '2室1厅', district: '朝阳', note: '', favorited_at: '2024-11-28T15:00:00Z', price_change: 0 },
-        { favorite_id: 3, house_id: 3, total_price: 620, price_per_sqm: 65000, area: 95, layout: '3室2厅', district: '海淀', note: '学区房', favorited_at: '2024-11-25T09:00:00Z', price_change: 10 }
-      ]
-    },
-    
-    // 关注的城市
-    cities: {
-      cities: [
-        { city_name: '北京', avg_price: 65000, price_change: 1.2, followed_at: '2024-11-01T10:00:00Z' },
-        { city_name: '上海', avg_price: 62000, price_change: -0.5, followed_at: '2024-11-15T10:00:00Z' },
-        { city_name: '杭州', avg_price: 35000, price_change: 2.1, followed_at: '2024-11-20T10:00:00Z' }
-      ]
-    },
-    
-    // 收藏的报告
-    reports: {
-      reports: [
-        { favorite_id: 1, report_id: 10, title: '2024年12月北京房产市场分析', type: 'monthly', favorited_at: '2024-12-05T10:00:00Z' },
-        { favorite_id: 2, report_id: 8, title: '2024年Q3全国房价走势报告', type: 'quarterly', favorited_at: '2024-10-15T10:00:00Z' }
-      ]
-    }
-  },
-  
-  // ============================================
   // 报告模块
   // ============================================
   report: {

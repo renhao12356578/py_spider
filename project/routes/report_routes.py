@@ -1,14 +1,22 @@
 """
 报告相关路由
+整合报告CRUD、AI生成、格式化等功能
 """
 from flask import Blueprint, request, jsonify, send_file
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from datetime import datetime
 import os
-from LLM.report import ReportDatabase
 
+# 导入服务层
+from report.reportDB import ReportDatabase
+from tools.house_query import get_area_statistics
+from utils import require_auth
+
+# 蓝图定义
 reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
 db = ReportDatabase()
 
+
+# ============ 报告类型 ============
 
 @reports_bp.route('/types', methods=['GET'])
 def get_report_types():
@@ -17,9 +25,7 @@ def get_report_types():
         types = db.get_report_types()
         return jsonify({
             "code": 200,
-            "data": {
-                "types": types
-            }
+            "data": {"types": types}
         })
     except Exception as e:
         return jsonify({
@@ -28,9 +34,11 @@ def get_report_types():
         }), 500
 
 
+# ============ 报告列表 ============
+
 @reports_bp.route('', methods=['GET'])
 def get_reports_list():
-    """获取报告列表"""
+    """获取报告列表（带分页和筛选）"""
     try:
         report_type = request.args.get('type')
         city = request.args.get('city')
@@ -56,6 +64,36 @@ def get_reports_list():
         }), 500
 
 
+@reports_bp.route('/list', methods=['GET'])
+def get_reports_list_alt():
+    """获取报告列表（备用路径）"""
+    try:
+        report_type = request.args.get('type')
+        city = request.args.get('city')
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 10))
+
+        result = db.get_all_reports_summary(
+            report_type=report_type,
+            city=city,
+            page=page,
+            page_size=page_size
+        )
+
+        return jsonify({
+            "code": 200,
+            "data": result
+        })
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"获取报告列表失败: {str(e)}"
+        }), 500
+
+
+# ============ 报告详情 ============
+
 @reports_bp.route('/<int:report_id>', methods=['GET'])
 def get_report_detail(report_id):
     """获取报告详情"""
@@ -80,13 +118,355 @@ def get_report_detail(report_id):
         }), 500
 
 
+# ============ 创建报告 ============
+
+@reports_bp.route('/create', methods=['POST'])
+@require_auth
+def create_report():
+    """创建报告（支持AI生成图片）"""
+    try:
+        data = request.get_json()
+        current_user = request.user_id
+
+        required_fields = ['title', 'summary', 'content']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({
+                    "code": 400,
+                    "message": f"缺少必要字段或字段为空: {field}"
+                }), 400
+
+        result = db.create_report_with_ai_support(
+            title=data['title'],
+            summary=data['summary'],
+            content=data['content'],
+            report_type=data.get('type'),
+            city=data.get('city'),
+            user_id=current_user,
+            generate_image=data.get('generate_image', True)
+        )
+
+        if result.get("success"):
+            return jsonify({
+                "code": 201,
+                "data": {
+                    "report_id": result["report_id"],
+                    "has_image": result.get("has_image"),
+                    "message": result.get("message", "创建成功")
+                }
+            }), 201
+        else:
+            return jsonify({
+                "code": 500,
+                "message": result.get("error", "创建报告失败")
+            }), 500
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"创建报告失败: {str(e)}"
+        }), 500
+
+
+# ============ 更新报告 ============
+
+@reports_bp.route('/<int:report_id>', methods=['PUT'])
+@require_auth
+def update_report(report_id):
+    """更新报告"""
+    try:
+        data = request.get_json()
+
+        if not any(key in data for key in ['title', 'summary', 'content']):
+            return jsonify({
+                "code": 400,
+                "message": "至少需要提供title、summary或content中的一个字段"
+            }), 400
+
+        success = db.update_report(
+            report_id=report_id,
+            title=data.get('title'),
+            summary=data.get('summary'),
+            content=data.get('content')
+        )
+
+        if not success:
+            return jsonify({
+                "code": 404,
+                "message": "报告不存在或更新失败"
+            }), 404
+
+        return jsonify({
+            "code": 200,
+            "data": {"message": "报告更新成功"}
+        })
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"更新报告失败: {str(e)}"
+        }), 500
+
+
+# ============ 删除报告 ============
+
+@reports_bp.route('/<int:report_id>', methods=['DELETE'])
+@require_auth
+def delete_report(report_id):
+    """删除报告（软删除）"""
+    try:
+        success = db.delete_report(report_id)
+
+        if not success:
+            return jsonify({
+                "code": 404,
+                "message": "报告不存在或删除失败"
+            }), 404
+
+        return jsonify({
+            "code": 200,
+            "data": {"message": "报告已删除"}
+        })
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"删除报告失败: {str(e)}"
+        }), 500
+
+
+# ============ AI生成报告 ============
+
+@reports_bp.route('/generate/ai', methods=['POST'])
+@require_auth
+def generate_ai_report():
+    """使用AI生成区域分析报告"""
+    try:
+        data = request.get_json()
+        current_user = request.user_id
+
+        if 'area' not in data or not data['area']:
+            return jsonify({
+                "code": 400,
+                "message": "缺少必要字段: area"
+            }), 400
+
+        result = db.generate_ai_report(
+            area=data['area'],
+            report_type=data.get('report_type', '市场分析'),
+            city=data.get('city'),
+            user_id=current_user
+        )
+
+        return jsonify({
+            "code": 201,
+            "data": result,
+            "message": "AI报告生成成功"
+        }), 201
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"AI报告生成失败: {str(e)}"
+        }), 500
+
+
+# ============ 格式化报告 ============
+
+@reports_bp.route('/format', methods=['POST'])
+@require_auth
+def format_report():
+    """格式化报告内容"""
+    try:
+        data = request.get_json()
+
+        if 'content' not in data or not data['content']:
+            return jsonify({
+                "code": 400,
+                "message": "缺少必要字段: content"
+            }), 400
+
+        content = data['content']
+        format_type = data.get('format_type', 'professional')
+
+        formatted_content = db.format_existing_report(content, format_type)
+
+        return jsonify({
+            "code": 200,
+            "data": {
+                "original_length": len(content),
+                "formatted_length": len(formatted_content),
+                "formatted_content": formatted_content,
+                "format_type": format_type
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"格式化失败: {str(e)}"
+        }), 500
+
+
+# ============ 区域统计 ============
+
+@reports_bp.route('/area/statistics', methods=['GET'])
+def get_area_statistics_api():
+    """获取区域统计信息"""
+    try:
+        area = request.args.get('area')
+
+        if not area:
+            return jsonify({
+                "code": 400,
+                "message": "缺少查询参数: area"
+            }), 400
+
+        statistics = get_area_statistics(area)
+
+        return jsonify({
+            "code": 200,
+            "data": {
+                "area": area,
+                "statistics": statistics,
+                "retrieved_at": datetime.now().isoformat()
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"获取统计信息失败: {str(e)}"
+        }), 500
+
+
+# ============ 生成图片 ============
+
+@reports_bp.route('/<int:report_id>/generate-image', methods=['POST'])
+@require_auth
+def generate_content_image(report_id):
+    """为报告内容生成图片"""
+    try:
+        data = request.get_json()
+
+        report = db.get_report_full_content(report_id)
+        if not report:
+            return jsonify({
+                "code": 404,
+                "message": "报告不存在"
+            }), 404
+
+        content = data.get('content') or report.get('content', '')[:500]
+        title = data.get('title', report.get('title'))
+
+        image_result = db.ai_service.generate_image_for_content(content, title)
+
+        if image_result.get("success"):
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            image_filename = db.save_image_from_base64(
+                image_result["image_data"],
+                prefix=f"content_{report_id}_{timestamp}"
+            )
+
+            if image_filename:
+                db._associate_image_with_report(report_id, image_filename, "content_generated")
+
+                return jsonify({
+                    "code": 200,
+                    "data": {
+                        "image_generated": True,
+                        "image_filename": image_filename,
+                        "image_path": os.path.join(db.img_path, image_filename)
+                    }
+                })
+
+        return jsonify({
+            "code": 500,
+            "message": "图片生成失败",
+            "details": image_result
+        }), 500
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"图片生成失败: {str(e)}"
+        }), 500
+
+
+# ============ 报告历史 ============
+
+@reports_bp.route('/<int:report_id>/history', methods=['GET'])
+@require_auth
+def get_content_history(report_id):
+    """获取报告内容修改历史"""
+    try:
+        history = db.get_content_history(report_id)
+
+        return jsonify({
+            "code": 200,
+            "data": {
+                "history": history,
+                "total": len(history)
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"获取历史记录失败: {str(e)}"
+        }), 500
+
+
+# ============ 生成草稿 ============
+
+@reports_bp.route('/generate-draft', methods=['POST'])
+@require_auth
+def generate_report_draft():
+    """AI生成报告草稿"""
+    try:
+        data = request.get_json()
+
+        if 'topic' not in data:
+            return jsonify({
+                "code": 400,
+                "message": "缺少topic字段"
+            }), 400
+
+        result = db.ai_service.generate_report_draft(
+            topic=data['topic'],
+            outline=data.get('outline')
+        )
+
+        if result.get("success"):
+            return jsonify({
+                "code": 200,
+                "data": {
+                    "draft": result["draft"],
+                    "tokens_used": result.get("tokens_used", 0)
+                }
+            })
+        else:
+            return jsonify({
+                "code": 500,
+                "message": f"生成草稿失败: {result.get('error', '未知错误')}"
+            }), 500
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"生成草稿失败: {str(e)}"
+        }), 500
+
+
+# ============ 自定义报告 ============
+
 @reports_bp.route('/generate', methods=['POST'])
-@jwt_required()
+@require_auth
 def generate_custom_report():
     """生成自定义报告"""
     try:
         data = request.get_json()
-        current_user = get_jwt_identity()
+        current_user = request.user_id
 
         required_fields = ['type', 'city', 'districts', 'date_range', 'metrics', 'format']
         for field in required_fields:
@@ -117,19 +497,19 @@ def generate_custom_report():
         }), 500
 
 
+# ============ 我的报告 ============
+
 @reports_bp.route('/my', methods=['GET'])
-@jwt_required()
+@require_auth
 def get_my_reports():
     """获取我的报告"""
     try:
-        current_user = get_jwt_identity()
+        current_user = request.user_id
         reports = db.get_user_reports(current_user)
 
         return jsonify({
             "code": 200,
-            "data": {
-                "reports": reports
-            }
+            "data": {"reports": reports}
         })
 
     except Exception as e:
@@ -139,8 +519,10 @@ def get_my_reports():
         }), 500
 
 
+# ============ 下载报告 ============
+
 @reports_bp.route('/download/<filename>', methods=['GET'])
-@jwt_required()
+@require_auth
 def download_report(filename):
     """下载报告文件"""
     try:

@@ -43,10 +43,6 @@
             <i data-lucide="file-text"></i>
             <span>数据报告</span>
           </a>
-          <a href="favorites.html" class="header-nav-item">
-            <i data-lucide="heart"></i>
-            <span>我的收藏</span>
-          </a>
           <a href="settings.html" class="header-nav-item">
             <i data-lucide="settings"></i>
             <span>设置</span>
@@ -267,22 +263,10 @@
         </div>
         
         <div class="detail-actions">
-          <!-- ✅ 添加登录状态提示 -->
-          <button class="btn-favorite" id="btn-favorite">
-            <i class="fas fa-star"></i>
-            <span>收藏报告</span>
-          </button>
           <button class="btn-share">
             <i class="fas fa-share-alt"></i>
             分享
-          </button
-          >
-          <!-- ✅ 未登录用户提示（初始隐藏） -->
-          <div class="login-hint" id="login-hint" style="display: none;">
-            <i class="fas fa-info-circle"></i>
-            <span>登录后可收藏报告并查看完整内容</span>
-            <a href="login.html">立即登录</a>
-          </div>
+          </button>
         </div>
         
         <div class="detail-footer">
@@ -304,7 +288,7 @@
               <i data-lucide="info" style="width: 24px; height: 24px; flex-shrink: 0;"></i>
               <div style="flex: 1;">
                   <h4 style="margin: 0 0 8px 0; font-size: 16px;">您正在以访客身份浏览</h4>
-                  <p style="margin: 0; opacity: 0.9; font-size: 14px;">登录后可生成自定义报告、收藏感兴趣的内容，并查看历史报告</p>
+                  <p style="margin: 0; opacity: 0.9; font-size: 14px;">登录后可生成自定义报告并查看历史报告</p>
               </div>
               <a href="login.html" style="background: white; color: #667eea; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; white-space: nowrap; transition: transform 0.2s;">
                   立即登录
