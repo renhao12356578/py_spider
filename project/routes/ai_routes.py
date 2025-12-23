@@ -8,15 +8,15 @@ from datetime import datetime
 from pathlib import Path
 import sys
 sys.path.append("..") #相对路径或绝对路径
-from LLM.LLM import recomandation_prompt, get_area_statistics, call_spark_api
+from py_spider.project.LLM.LLM import recomandation_prompt
 import random
 from flask import Flask, request, jsonify,Blueprint
 from pathlib import Path
 from datetime import datetime
 import uuid
 import re
-from LLM.use_data import *
-from LLM.LLM import call_spark_api
+from py_spider.project.LLM.use_data import *
+from LLM import call_spark_api
 
 # ============================================
 # Flask应用初始化
@@ -987,84 +987,121 @@ def list_sessions():
 # 注册蓝图（将在文件末尾统一注册，确保所有路由已定义）
 
 
-
 @ai_bp.route('/value/<city>', methods=['GET'])
 def value_report(city):
-    """基于 `summary_all.csv` 和 `predictions_all.csv` 中指定城市的 detail 撰写报告并返回"""
+    """基于 `summary_all.csv` 中指定城市的 detail 撰写报告并返回"""
     try:
         import csv, json
+        from pathlib import Path
 
         base = Path(__file__).parent
         summary_path = base / 'summary_all.csv'
-        pred_path = base / 'predictions_all.csv'
 
         # 读取 summary
         summary = None
+        city_list = []  # 用于调试：存储所有城市名
+
         if summary_path.exists():
-            with open(summary_path, 'r', encoding='utf-8') as f:
+            with open(summary_path, 'r', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    if row.get('city') == city:
+                    city_name = row.get('city')
+                    city_list.append(city_name)  # 添加到列表用于调试
+                    if city_name == city:
                         summary = row
                         break
+
+        # Debugging: Print all city names in summary_all.csv
+        print("Cities in summary_all.csv:", city_list)
 
         if not summary:
             return jsonify({'code': 404, 'message': f'城市 {city} 未在 summary_all 中找到'}), 404
 
-        # Debugging: Print all city names in summary_all.csv
-        print("Cities in summary_all.csv:")
-        with open(summary_path, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                print(row.get('city'))
+        # 提取关键信息
+        current_price = summary.get('current_price', 'N/A')
+        trend = summary.get('trend', 'N/A')
+        change_percent = summary.get('change_percent', '0')
+        confidence = summary.get('confidence', 'N/A')
+        linear_trend = summary.get('linear_trend', 'N/A')
+        linear_slope = summary.get('linear_slope', '0')
+        polynomial_r_squared = summary.get('polynomial_r_squared', '0')
+        forecast_periods = summary.get('forecast_periods', '0')
+        historical_count = summary.get('historical_count', '0')
+        ma_trend = summary.get('ma_trend', '0')
 
-        # Reset file pointer for actual processing
-        f.seek(0)
+        # 构造结构化的提示词
+        prompt = f"""请基于以下城市房地产市场数据，生成一份专业、详细的市场分析报告：
 
-        # 读取 predictions，收集该城市的多条预测并按日期降序
-        preds = []
-        if pred_path.exists():
-            with open(pred_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    if row.get('city') == city:
-                        preds.append(row)
+【城市基本信息】
+城市名称：{city}
 
-        # 按 date 降序并取最近 6 条
-        try:
-            preds_sorted = sorted(preds, key=lambda r: r.get('date', ''), reverse=True)
-        except Exception:
-            preds_sorted = preds
+【核心市场指标】
+1. 当前价格：{current_price}
+2. 市场趋势：{trend}
+3. 价格变动幅度：{change_percent}%
+4. 模型置信度：{confidence}
 
-        selected = preds_sorted[:6]
+【模型分析结果】
+1. 线性回归趋势斜率：{linear_slope}）
+2. 多项式模型拟合度：{polynomial_r_squared}
+3. 移动平均趋势值：{ma_trend}
 
-        pred_texts = []
-        for r in selected:
-            detail = r.get('detail', '')
-            # 尝试解析 JSON detail，失败则原样使用
-            try:
-                parsed = json.loads(detail)
-                detail_str = json.dumps(parsed, ensure_ascii=False)
-            except Exception:
-                detail_str = detail
+【报告要求】
+请生成一份400-500字的深度市场分析报告，必须包含以下章节：
 
-            pred_texts.append(f"{r.get('date','')},{r.get('method','')},{r.get('predicted_price','')} - {detail_str}")
+一、当前市场状况分析
+分析当前房价水平、涨跌趋势及变化幅度，结合置信度评估数据可靠性。
 
-        # 构造 prompt
-        prompt = "城市摘要:\n" + json.dumps(summary, ensure_ascii=False) + "\n\n预测细节(最近几条):\n" + "\n".join(pred_texts)
+二、技术模型综合解读
+结合线性回归、多项式拟合和移动平均等模型结果，解读各模型对市场趋势的判断，分析模型间的一致性或差异性。
+
+三、市场趋势深度研判
+基于所有技术指标，对未来3-6个月的市场走势进行详细研判，包括：
+1. 短期走势预测（1-3个月）
+2. 中期走势判断（3-6个月）
+3. 关键支撑/阻力位分析
+
+四、投资建议与风险提示
+提供具体的投资建议，包括：
+1. 对不同类型投资者（刚需、改善、投资）的具体建议
+2. 最佳入场/出场时机建议
+3. 需关注的关键风险因素
+4. 应对策略建议
+
+五、结论与展望
+给出明确的综合结论，并对未来6-12个月的市场前景进行展望。
+
+【报告风格】
+语言专业但不晦涩，数据准确，逻辑清晰，结论明确，具有实用性和可操作性。"""
 
         # 调用 AIService 生成报告
         ai = AIService()
-        user_message = "请基于以上摘要与预测细节，撰写一份专业的市场报告（约200字），包含现状、趋势判断和建议："
+        user_message = "请根据上述数据和格式要求，生成专业的房地产市场分析报告："
         report = ai.call_ai(None, user_message, prompt)
 
         if not report:
             return jsonify({'code': 500, 'message': 'AI 未返回内容'}), 500
 
-        return jsonify({'code': 200, 'city': city, 'report': report}), 200
+        return jsonify({
+            'code': 200,
+            'city': city,
+            'report': report,
+            'summary_data': {
+                'current_price': current_price,
+                'trend': trend,
+                'change_percent': change_percent,
+                'confidence': confidence,
+                'forecast_periods': forecast_periods
+            }
+        }), 200
 
     except Exception as e:
+        print(f"Error generating report for city {city}: {str(e)}")
         return jsonify({'code': 500, 'message': str(e)}), 500
-
 # 在文件末尾统一注册 ai_bp
 app.register_blueprint(ai_bp)
+
+from pathlib import Path
+import csv
+import codecs
+

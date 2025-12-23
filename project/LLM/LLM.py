@@ -14,7 +14,7 @@ from numpy.f2py.auxfuncs import throw_error
 import sys
 import sys
 sys.path.append("..") #相对路径或绝对路径
-from LLM.use_data import query_house_data_by_area,get_area_statistics
+from py_spider.project.LLM.use_data import query_house_data_by_area,get_area_statistics
 
 # ================= 配置区域 =================
 appid = "67e25832"

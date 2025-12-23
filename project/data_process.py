@@ -2,7 +2,95 @@ import pymysql
 import json
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
-from config.db_config import get_db_connection
+
+# 数据库配置
+DB_CONFIG = {
+    'host': "gateway01.eu-central-1.prod.aws.tidbcloud.com",
+    'port': 4000,
+    'user': "48pvdQxqqjLneBr.root",
+    'password': "o46hvbIhibN3tTPp",
+    'database': "python_project",
+    'ssl_ca': "C:/Users/24141/Desktop/1/tidb-ca.pem",
+    'ssl_verify_cert': True,
+    'ssl_verify_identity': True
+}
+
+
+def get_db_connection():
+    """获取数据库连接（复用data_use.py实现）"""
+    try:
+        connection = pymysql.connect(**DB_CONFIG)
+        return connection
+    except Exception as e:
+        print(f"数据库连接失败: {e}")
+        return None
+
+
+def user_login(username: str, password: str) -> str:
+    """
+    实现POST /api/auth/login
+    用户登录验证（使用用户基本信息表）
+    :param username: 用户名
+    :param password: 密码
+    """
+    if not username or not password:
+        return json.dumps({
+            "code": 400,
+            "message": "用户名和密码不能为空",
+            "data": {}
+        }, ensure_ascii=False)
+
+    connection = get_db_connection()
+    if not connection:
+        return json.dumps({
+            "code": 500,
+            "message": "数据库连接失败",
+            "data": {}
+        }, ensure_ascii=False)
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+
+        # 查询用户（注意：生产环境应使用密码加密存储，此处为演示）
+        query = """
+                SELECT id, username \
+                FROM users
+                WHERE username = %s \
+                  AND password_hash = %s \
+                """
+        cursor.execute(query, (username.strip(), password.strip()))
+        user = cursor.fetchone()
+
+        if not user:
+            return json.dumps({
+                "code": 401,
+                "message": "用户名或密码错误",
+                "data": {}
+            }, ensure_ascii=False)
+
+
+        response = {
+            "code": 200,
+            "message": "登录成功",
+            "data": {
+                "user": {
+                    "id": user['id'],
+                    "username": user['username']
+                }
+            }
+        }
+
+        cursor.close()
+        connection.close()
+        return json.dumps(response, ensure_ascii=False)
+
+    except Exception as e:
+        print(f"登录失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "message": f"登录异常: {str(e)}",
+            "data": {}
+        }, ensure_ascii=False)
 
 
 def get_national_overview() -> str:
@@ -286,21 +374,9 @@ def get_city_ranking(rank_type: str, limit: int = 10, order: str = "desc") -> st
             "rent_ratio": "price_rent_ratio"  # 租售比排行
         }
         field = type_field_map[rank_type]
-        #print(f"🏆 获取城市排行榜: 类型={rank_type}, 字段={field}, 限制={limit}, 顺序={order}")
+
         # 构建查询
-        if rank_type == "price" or rank_type == "rent_ratio":
-            # 其他类型直接取城市去重数据
-            query = f"""
-            SELECT DISTINCT
-                city_name,
-                {field} as value
-            FROM current_price
-            WHERE {field} IS NOT NULL AND {field} > 0
-            ORDER BY {field} {order.upper()}
-            LIMIT {limit}
-            """
-        
-        elif rank_type == "change":
+        if rank_type == "change":
             # 涨跌比取城市下所有区县的平均值
             query = f"""
             SELECT 
@@ -312,7 +388,17 @@ def get_city_ranking(rank_type: str, limit: int = 10, order: str = "desc") -> st
             ORDER BY value {order.upper()}
             LIMIT {limit}
             """
-        
+        else:
+            # 其他类型直接取城市去重数据
+            query = f"""
+            SELECT DISTINCT
+                city_name,
+                {field} as value
+            FROM current_price
+            WHERE {field} IS NOT NULL AND {field} > 0
+            ORDER BY {field} {order.upper()}
+            LIMIT {limit}
+            """
 
         cursor.execute(query)
         results = cursor.fetchall()
@@ -413,6 +499,7 @@ def search_city(keyword: str) -> str:
         }, ensure_ascii=False)
 
 
+
 def get_price_trend(city: str, year: Optional[int] = None) -> str:
     """
     实现GET /api/national/trend
@@ -438,12 +525,12 @@ def get_price_trend(city: str, year: Optional[int] = None) -> str:
     try:
         cursor = connection.cursor(pymysql.cursors.DictCursor)
 
-    
+        # 构建年份条件（默认2023-2025）
         year_condition = ""
-        if year:
+        if year and year >= 2023 and year <= 2025:
             year_condition = f"AND year = {year}"
         else:
-            year_condition = "AND year = 2025"
+            year_condition = "AND year BETWEEN 2023 AND 2025"
 
         query = f"""
         SELECT
@@ -458,20 +545,43 @@ def get_price_trend(city: str, year: Optional[int] = None) -> str:
         cursor.execute(query)
         trends = cursor.fetchall()
 
+        p_query = f"""
+        SELECT
+            year,
+            month,
+            predicted_price as avg_price,
+            method
+        FROM predict1
+        WHERE city LIKE '%{city.strip()}%'
+        ORDER BY year ASC, month ASC
+        """
+        cursor.execute(p_query)
+        predicts = cursor.fetchall()
+
         # 格式化结果
         formatted_trends = []
         for trend in trends:
             formatted_trends.append({
                 "year": trend['year'],
                 "month": trend['month'],
-                "avg_price": int(trend['avg_price'])
+                "avg_price": int(trend['avg_price']),
+                "predict": 'exist'
+            })
+
+        formatted_predicts = []
+        for predict in predicts:
+            formatted_predicts.append({
+                "year": predict['year'],
+                "month": predict['month'],
+                "avg_price": int(predict['avg_price']),
+                "predict": predict['method']
             })
 
         response = {
             "code": 200,
             "data": {
                 "city_name": city.strip(),
-                "trends": formatted_trends
+                "trends": formatted_trends+formatted_predicts
             }
         }
 
@@ -486,7 +596,6 @@ def get_price_trend(city: str, year: Optional[int] = None) -> str:
             "data": {},
             "message": f"查询失败: {str(e)}"
         }, ensure_ascii=False)
-
 
 def get_beijing_overview() -> str:
     """
@@ -804,6 +913,8 @@ def analysis_orientation() -> str:
                     orientation IS NOT NULL
                   AND orientation != ''              -- 过滤空字符串
                   AND CHAR_LENGTH (orientation) <= 2 -- 仅保留1-2个汉字的朝向
+                  AND orientation != '南北'
+                  AND orientation != '东西'  
                 GROUP BY orientation -- 确保每种有效朝向仅一条记录
                 ORDER BY count DESC -- 按房源数量降序排序 \
                 """
@@ -839,6 +950,7 @@ def analysis_orientation() -> str:
             "data": {},
             "message": f"朝向特征分析异常: {str(e)}"
         }, ensure_ascii=False)
+
 
 def analysis_elevator() -> str:
     """
