@@ -2,7 +2,7 @@
 全国数据相关路由
 """
 from flask import Blueprint, request, jsonify
-import data_process as dp
+import py_spider.project.data_process as dp
 import json
 
 national_bp = Blueprint('national', __name__, url_prefix='/api/national')

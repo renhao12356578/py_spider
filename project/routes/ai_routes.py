@@ -16,7 +16,7 @@ from datetime import datetime
 import uuid
 import re
 from py_spider.project.LLM.use_data import *
-from LLM import call_spark_api
+from py_spider.project.LLM.LLM import call_spark_api
 
 # ============================================
 # Flask应用初始化

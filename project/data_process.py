@@ -2,18 +2,8 @@ import pymysql
 import json
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
+from config.db_config import get_db_connection,DB_CONFIG
 
-# 数据库配置
-DB_CONFIG = {
-    'host': "gateway01.eu-central-1.prod.aws.tidbcloud.com",
-    'port': 4000,
-    'user': "48pvdQxqqjLneBr.root",
-    'password': "o46hvbIhibN3tTPp",
-    'database': "python_project",
-    'ssl_ca': "C:/Users/24141/Desktop/1/tidb-ca.pem",
-    'ssl_verify_cert': True,
-    'ssl_verify_identity': True
-}
 
 
 def get_db_connection():
