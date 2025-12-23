@@ -52,8 +52,7 @@ async function initPage() {
   // 加载概览数据
   await loadOverviewData();
   
-  // 初始化第一个标签页的图表
-  initDistrictCharts();
+  // 加载区域数据
   await loadDistrictData();
 }
 

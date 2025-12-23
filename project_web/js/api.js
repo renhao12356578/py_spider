@@ -7,7 +7,7 @@ const API = {
   BASE_URL: 'http://127.0.0.1:5000/api',
 
   // 模拟模式开关 - 设为 true 使用模拟数据，false 请求真实后端
-  MOCK_MODE: true,
+  MOCK_MODE: false,
 
   // 模拟延迟（毫秒）- 模拟网络请求延迟
   MOCK_DELAY:0,
