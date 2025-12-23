@@ -447,19 +447,23 @@ def search_city(keyword: str) -> str:
     try:
         cursor = connection.cursor(pymysql.cursors.DictCursor)
 
-        query = f"""
+        # 使用参数化查询，避免SQL注入
+        query = """
         SELECT DISTINCT
             city_name,
             province_name,
             city_avg_price
         FROM current_price
         WHERE 
-            city_name LIKE '%{keyword.strip()}%' 
-            OR province_name LIKE '%{keyword.strip()}%'
+            city_name LIKE %s 
+            OR province_name LIKE %s
         ORDER BY city_avg_price DESC
         LIMIT 20
         """
-        cursor.execute(query)
+        
+        # 构建LIKE模式的参数
+        like_pattern = f"%{keyword.strip()}%"
+        cursor.execute(query, (like_pattern, like_pattern))
         results = cursor.fetchall()
 
         # 格式化结果
@@ -468,7 +472,7 @@ def search_city(keyword: str) -> str:
             formatted_results.append({
                 "city_name": item['city_name'],
                 "province_name": item['province_name'],
-                "city_avg_price": int(item['city_avg_price'])
+                "city_avg_price": int(item['city_avg_price']) if item['city_avg_price'] is not None else 0
             })
 
         response = {
@@ -482,12 +486,13 @@ def search_city(keyword: str) -> str:
 
     except Exception as e:
         print(f"城市搜索失败: {e}")
+        import traceback
+        traceback.print_exc()
         return json.dumps({
             "code": 500,
             "data": {},
             "message": f"查询失败: {str(e)}"
         }, ensure_ascii=False)
-
 
 
 def get_price_trend(city: str, year: Optional[int] = None) -> str:
@@ -1304,6 +1309,7 @@ def query_houses_list(
     except Exception as e:
         print(f"房源列表查询失败: {e}")
         return json.dumps({"code": 500, "msg": f"查询失败: {str(e)}"})
+
 
 
 
