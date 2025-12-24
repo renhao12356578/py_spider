@@ -7,6 +7,9 @@
 let chinaMapChart = null;
 let trendChart = null;
 let cityData = [];
+let provincePopupChart = null;
+let provincePopup = null;
+let hoverTimeout = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   // 检查登录状态
@@ -98,6 +101,30 @@ function initCharts() {
         window.location.href = 'beijing.html';
       }
     });
+    
+    // 地图悬停事件
+    chinaMapChart.on('mouseover', function(params) {
+      if (params.componentType === 'series' && params.seriesType === 'map') {
+        clearTimeout(hoverTimeout);
+        hoverTimeout = setTimeout(() => {
+          showProvincePopup(params.name, params.event.event);
+        }, 300);
+      }
+    });
+    
+    chinaMapChart.on('mouseout', function(params) {
+      clearTimeout(hoverTimeout);
+      hoverTimeout = setTimeout(() => {
+        hideProvincePopup();
+      }, 200);
+    });
+    
+    // 初始化弹窗
+    provincePopup = document.getElementById('provincePopup');
+    const popupChartContainer = document.getElementById('popupChart');
+    if (popupChartContainer) {
+      provincePopupChart = echarts.init(popupChartContainer);
+    }
   }
   
   // 趋势图
@@ -496,6 +523,264 @@ function formatLargeNumber(num) {
     return (num / 10000).toFixed(1) + '万';
   }
   return num.toLocaleString();
+}
+
+/**
+ * 显示省份悬停弹窗
+ */
+function showProvincePopup(provinceName, mouseEvent) {
+  if (!provincePopup || !provinceName) return;
+  
+  // 获取该省的城市数据
+  const provinceCities = cityData.filter(city => city.province_name === provinceName);
+  
+  if (provinceCities.length === 0) {
+    return;
+  }
+  
+  // 计算统计数据(使用加权平均)
+  const totalListings = provinceCities.reduce((sum, city) => sum + (city.listing_count || 0), 0);
+  const totalPrice = provinceCities.reduce((sum, city) => 
+    sum + (city.city_avg_price * (city.listing_count || 0)), 0
+  );
+  const avgPrice = totalListings > 0 ? Math.round(totalPrice / totalListings) : 0;
+  
+  // 获取主要城市(按房价排序,取前5个)
+  const topCities = provinceCities
+    .sort((a, b) => b.city_avg_price - a.city_avg_price)
+    .slice(0, 5)
+    .map(c => c.city_name);
+  
+  // 更新弹窗内容
+  document.getElementById('popupProvinceName').textContent = provinceName;
+  document.getElementById('popupAvgPrice').textContent = formatNumber(avgPrice) + ' 元/㎡';
+  document.getElementById('popupListingCount').textContent = formatLargeNumber(totalListings) + ' 套';
+  document.getElementById('popupCityCount').textContent = provinceCities.length + ' 个';
+  document.getElementById('popupCities').textContent = '主要: ' + topCities.join('、');
+  
+  // 渲染城市热力图
+  renderProvinceCityHeatmap(provinceCities, provinceName);
+  
+  // 定位弹窗
+  const x = mouseEvent.clientX || mouseEvent.pageX;
+  const y = mouseEvent.clientY || mouseEvent.pageY;
+  
+  provincePopup.style.left = (x + 20) + 'px';
+  provincePopup.style.top = (y - 100) + 'px';
+  
+  // 显示弹窗
+  provincePopup.classList.add('active');
+}
+
+/**
+ * 隐藏省份悬停弹窗
+ */
+function hideProvincePopup() {
+  if (provincePopup) {
+    provincePopup.classList.remove('active');
+  }
+}
+
+/**
+ * 渲染省份城市热力图(省级地图+散点)
+ */
+function renderProvinceCityHeatmap(cities, provinceName) {
+  if (!provincePopupChart || cities.length === 0) return;
+  
+  // 省份名称映射(ECharts地图名称)
+  const provinceMapNames = {
+    '北京': 'beijing', '天津': 'tianjin', '河北': 'hebei', '山西': 'shanxi',
+    '内蒙古': 'neimenggu', '辽宁': 'liaoning', '吉林': 'jilin', '黑龙江': 'heilongjiang',
+    '上海': 'shanghai', '江苏': 'jiangsu', '浙江': 'zhejiang', '安徽': 'anhui',
+    '福建': 'fujian', '江西': 'jiangxi', '山东': 'shandong', '河南': 'henan',
+    '湖北': 'hubei', '湖南': 'hunan', '广东': 'guangdong', '广西': 'guangxi',
+    '海南': 'hainan', '重庆': 'chongqing', '四川': 'sichuan', '贵州': 'guizhou',
+    '云南': 'yunnan', '西藏': 'xizang', '陕西': 'shanxi1', '甘肃': 'gansu',
+    '青海': 'qinghai', '宁夏': 'ningxia', '新疆': 'xinjiang', '台湾': 'taiwan',
+    '香港': 'xianggang', '澳门': 'aomen'
+  };
+  
+  const mapName = provinceMapNames[provinceName];
+  
+  // 如果没有对应的省级地图,使用散点图
+  if (!mapName) {
+    renderCityScatterChart(cities);
+    return;
+  }
+  
+  // 动态加载省级地图
+  const mapUrl = `https://geo.datav.aliyun.com/areas_v3/bound/${mapName}_full.json`;
+  
+  fetch(mapUrl)
+    .then(response => response.json())
+    .then(geoJson => {
+      // 注册省级地图
+      echarts.registerMap(mapName, geoJson);
+      
+      // 准备散点数据
+      const scatterData = cities.map(city => ({
+        name: city.city_name,
+        value: [0, 0, city.city_avg_price],
+        itemStyle: {
+          color: getPriceColor(city.city_avg_price)
+        }
+      }));
+      
+      const option = {
+        tooltip: {
+          trigger: 'item',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderColor: '#e5e7eb',
+          borderWidth: 1,
+          textStyle: {
+            color: '#1f2937',
+            fontSize: 12
+          },
+          formatter: function(params) {
+            if (params.seriesType === 'scatter') {
+              return `${params.name}<br/>房价: ${params.value[2].toLocaleString()} 元/㎡`;
+            }
+            return params.name;
+          }
+        },
+        geo: {
+          map: mapName,
+          roam: false,
+          itemStyle: {
+            areaColor: '#f0f9ff',
+            borderColor: '#93c5fd',
+            borderWidth: 1
+          },
+          emphasis: {
+            itemStyle: {
+              areaColor: '#dbeafe'
+            }
+          }
+        },
+        series: [{
+          type: 'scatter',
+          coordinateSystem: 'geo',
+          data: scatterData,
+          symbolSize: function(val) {
+            return Math.max(8, Math.min(20, val[2] / 3000));
+          },
+          label: {
+            show: true,
+            formatter: '{b}',
+            position: 'right',
+            fontSize: 10,
+            color: '#374151'
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: 11,
+              fontWeight: 'bold'
+            },
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.3)'
+            }
+          }
+        }]
+      };
+      
+      provincePopupChart.setOption(option, true);
+    })
+    .catch(error => {
+      console.error('加载省级地图失败:', error);
+      // 降级为散点图
+      renderCityScatterChart(cities);
+    });
+}
+
+/**
+ * 降级方案: 渲染城市散点图(无地图)
+ */
+function renderCityScatterChart(cities) {
+  if (!provincePopupChart || cities.length === 0) return;
+  
+  // 按房价排序
+  const sortedCities = cities.sort((a, b) => b.city_avg_price - a.city_avg_price);
+  
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      textStyle: {
+        color: '#1f2937',
+        fontSize: 12
+      },
+      formatter: function(params) {
+        return `${params.name}<br/>房价: ${params.value.toLocaleString()} 元/㎡`;
+      }
+    },
+    grid: {
+      left: '10%',
+      right: '10%',
+      bottom: '10%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: sortedCities.map(c => c.city_name),
+      axisLabel: {
+        rotate: 45,
+        fontSize: 10,
+        color: '#6b7280'
+      },
+      axisLine: { lineStyle: { color: '#e5e7eb' } }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: v => (v / 10000).toFixed(0) + '万',
+        fontSize: 10,
+        color: '#6b7280'
+      },
+      splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }
+    },
+    series: [{
+      type: 'scatter',
+      data: sortedCities.map(c => c.city_avg_price),
+      symbolSize: function(val) {
+        return Math.max(10, Math.min(25, val / 2000));
+      },
+      itemStyle: {
+        color: function(params) {
+          return getPriceColor(params.value);
+        },
+        shadowBlur: 5,
+        shadowColor: 'rgba(0, 0, 0, 0.2)'
+      },
+      label: {
+        show: true,
+        formatter: function(params) {
+          return (params.value / 10000).toFixed(1) + '万';
+        },
+        position: 'top',
+        fontSize: 9,
+        color: '#6b7280'
+      }
+    }]
+  };
+  
+  provincePopupChart.setOption(option, true);
+}
+
+/**
+ * 根据房价获取颜色
+ */
+function getPriceColor(price) {
+  if (price < 8000) return '#10b981';
+  if (price < 12000) return '#84cc16';
+  if (price < 18000) return '#eab308';
+  if (price < 25000) return '#f59e0b';
+  if (price < 35000) return '#ef4444';
+  return '#dc2626';
 }
 
 /**

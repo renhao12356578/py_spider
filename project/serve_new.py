@@ -18,6 +18,7 @@ from routes.auth_routes import auth_bp
 from routes.user import user_bp
 from routes.ai_routes import load_all_sessions
 from routes.system_routes import system_bp
+from routes.chart_routes import charts_bp
 
 
 # 创建Flask应用

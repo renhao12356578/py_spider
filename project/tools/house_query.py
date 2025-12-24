@@ -6,6 +6,7 @@
 import pymysql
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
+from datetime import datetime
 import sys
 import os
 
@@ -282,222 +283,9 @@ def query_house_data_by_area(area_name: str, limit: int = 20) -> Tuple[List[Dict
         return [], []
 
 
-
-def get_area_statistics(area_name: str) -> Dict:
-    """获取区域统计信息，包含建设年代分析
-    result={
-            'basic_stats': stats,
-            'layout_distribution': layout_distribution,
-            'year_distribution': year_distribution,
-            'price_distribution': price_distribution,
-            'elevator_stats': elevator_stats,
-            'orientation_stats': orientation_stats
-        }"""
-    connection = get_db_connection()
-    if not connection:
-        return {}
-
-    try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
-
-        # 1. 基础统计
-        stats_query = f"""
-        SELECT 
-            COUNT(*) as total_listings,
-            ROUND(AVG(total_price), 2) as avg_total_price,
-            ROUND(AVG(price_per_sqm), 2) as avg_unit_price,
-            MIN(total_price) as min_price,
-            MAX(total_price) as max_price,
-            ROUND(AVG(area), 2) as avg_size,
-            COUNT(DISTINCT community) as distinct_communities
-        FROM beijing_house_info 
-        WHERE 
-            region LIKE '%{area_name}%' 
-            OR business_area LIKE '%{area_name}%'
-            OR community LIKE '%{area_name}%'
-        """
-
-        print(f"📊 执行基础统计查询...")
-        cursor.execute(stats_query)
-        stats = cursor.fetchone()
-        print(f"📊 基础统计结果: {stats}")
-
-        # 如果基础统计为空，直接返回
-        if not stats or stats.get('total_listings', 0) == 0:
-            print(f"⚠️ 未找到 {area_name} 的数据")
-            cursor.close()
-            connection.close()
-            return {}
-
-        # 2. 户型分布统计 - 修复GROUP BY问题
-        layout_query = f"""
-        SELECT 
-            IFNULL(layout, '未知') as layout,
-            COUNT(*) as count,
-            ROUND(AVG(total_price), 2) as avg_price,
-            ROUND(AVG(price_per_sqm), 2) as avg_unit_price,
-            ROUND(AVG(area), 2) as avg_size
-        FROM beijing_house_info 
-        WHERE 
-            (region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%')
-        GROUP BY IFNULL(layout, '未知')
-        ORDER BY count DESC
-        LIMIT 10
-        """
-
-        cursor.execute(layout_query)
-        layout_distribution = cursor.fetchall()
-
-        # 3. 建设年代分布 - 修复GROUP BY问题
-        build_year_query = f"""
-        WITH year_categories AS (
-            SELECT 
-                build_year,
-                CASE 
-                    WHEN build_year IS NULL THEN '未知年代'
-                    WHEN build_year < 1990 THEN '1990年以前'
-                    WHEN build_year BETWEEN 1990 AND 1994 THEN '1990-1994年'
-                    WHEN build_year BETWEEN 1995 AND 1999 THEN '1995-1999年'
-                    WHEN build_year BETWEEN 2000 AND 2004 THEN '2000-2004年'
-                    WHEN build_year BETWEEN 2005 AND 2009 THEN '2005-2009年'
-                    WHEN build_year BETWEEN 2010 AND 2014 THEN '2010-2014年'
-                    WHEN build_year BETWEEN 2015 AND 2019 THEN '2015-2019年'
-                    WHEN build_year >= 2020 THEN '2020年以后'
-                    ELSE '未知年代'
-                END as build_period
-            FROM beijing_house_info 
-            WHERE 
-                region LIKE '%{area_name}%' 
-                OR business_area LIKE '%{area_name}%'
-        )
-        SELECT 
-            build_period,
-            COUNT(*) as count,
-            ROUND(AVG(h.total_price), 2) as avg_total_price,
-            ROUND(AVG(h.price_per_sqm), 2) as avg_unit_price,
-            ROUND(AVG(h.area), 2) as avg_size
-        FROM beijing_house_info h
-        JOIN year_categories yc ON h.build_year = yc.build_year
-        WHERE 
-            h.region LIKE '%{area_name}%' 
-            OR h.business_area LIKE '%{area_name}%'
-        GROUP BY build_period
-        ORDER BY 
-            CASE 
-                WHEN build_period = '未知年代' THEN 9999
-                WHEN build_period = '1990年以前' THEN 1
-                WHEN build_period = '1990-1994年' THEN 2
-                WHEN build_period = '1995-1999年' THEN 3
-                WHEN build_period = '2000-2004年' THEN 4
-                WHEN build_period = '2005-2009年' THEN 5
-                WHEN build_period = '2010-2014年' THEN 6
-                WHEN build_period = '2015-2019年' THEN 7
-                ELSE 8
-            END
-        """
-
-        cursor.execute(build_year_query)
-        year_distribution = cursor.fetchall()
-
-        # 4. 价格段分布 - 修复ORDER BY问题
-        price_dist_query = f"""
-        SELECT 
-            CASE 
-                WHEN total_price < 200 THEN '200万以下'
-                WHEN total_price < 400 THEN '200-400万'
-                WHEN total_price < 600 THEN '400-600万'
-                WHEN total_price < 800 THEN '600-800万'
-                WHEN total_price < 1000 THEN '800-1000万'
-                WHEN total_price < 1500 THEN '1000-1500万'
-                WHEN total_price < 2000 THEN '1500-2000万'
-                ELSE '2000万以上'
-            END as price_range,
-            COUNT(*) as count,
-            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM beijing_house_info 
-                  WHERE region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%'), 2) as percentage,
-            ROUND(AVG(price_per_sqm), 2) as avg_unit_price
-        FROM beijing_house_info 
-        WHERE region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%'
-        GROUP BY 
-            CASE 
-                WHEN total_price < 200 THEN '200万以下'
-                WHEN total_price < 400 THEN '200-400万'
-                WHEN total_price < 600 THEN '400-600万'
-                WHEN total_price < 800 THEN '600-800万'
-                WHEN total_price < 1000 THEN '800-1000万'
-                WHEN total_price < 1500 THEN '1000-1500万'
-                WHEN total_price < 2000 THEN '1500-2000万'
-                ELSE '2000万以上'
-            END
-        ORDER BY 
-            MIN(total_price)
-        """
-
-        cursor.execute(price_dist_query)
-        price_distribution = cursor.fetchall()
-
-        # 5. 电梯情况统计
-        elevator_query = f"""
-        SELECT 
-            IFNULL(has_elevator, '未知') as has_elevator,
-            COUNT(*) as count,
-            ROUND(AVG(total_price), 2) as avg_total_price,
-            ROUND(AVG(price_per_sqm), 2) as avg_unit_price
-        FROM beijing_house_info 
-        WHERE region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%'
-        GROUP BY IFNULL(has_elevator, '未知')
-        ORDER BY count DESC
-        """
-
-        cursor.execute(elevator_query)
-        elevator_stats = cursor.fetchall()
-
-        # 6. 朝向分布
-        orientation_query = f"""
-        SELECT 
-            IFNULL(orientation, '未知') as orientation,
-            COUNT(*) as count,
-            ROUND(AVG(total_price), 2) as avg_total_price,
-            ROUND(AVG(price_per_sqm), 2) as avg_unit_price
-        FROM beijing_house_info 
-        WHERE region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%'
-        GROUP BY IFNULL(orientation, '未知')
-        ORDER BY count DESC
-        LIMIT 8
-        """
-
-        cursor.execute(orientation_query)
-        orientation_stats = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        result = {
-            'basic_stats': stats,
-            'layout_distribution': layout_distribution,
-            'year_distribution': year_distribution,
-            'price_distribution': price_distribution,
-            'elevator_stats': elevator_stats,
-            'orientation_stats': orientation_stats
-        }
-
-        print(f" 统计查询完成")
-        return result
-
-    except Exception as e:
-        print(f" 统计查询失败: {e}")
-        import traceback
-        traceback.print_exc()
-        if 'cursor' in locals():
-            cursor.close()
-        if connection:
-            connection.close()
-        return {}
-
-
 def query_all_distinct_locations() -> Tuple[List[Dict], List[str]]:
     """
-    查询所有不同的地点信息（区域、商圈、小区）- 优化为单次查询
+    查询所有不同的地点信息（区域、商圈、小区）
     返回: (数据列表, 表头字段名)
     """
     connection = get_db_connection()
@@ -520,7 +308,7 @@ def query_all_distinct_locations() -> Tuple[List[Dict], List[str]]:
         ORDER BY type, name
         """
 
-        print(f" 执行地点查询（优化版）...")
+        print(f"📝 执行地点查询（优化版）...")
         cursor.execute(query)
         all_locations = cursor.fetchall()
 
@@ -534,14 +322,14 @@ def query_all_distinct_locations() -> Tuple[List[Dict], List[str]]:
 
         column_names = ['类型', '名称']
 
-        print(f" 查询结果: 找到 {len(results)} 条地点数据")
+        print(f"✅ 查询结果: 找到 {len(results)} 条地点数据")
 
         cursor.close()
         connection.close()
         return results, column_names
 
     except Exception as e:
-        print(f" 查询失败: {e}")
+        print(f"❌ 查询失败: {e}")
         import traceback
         traceback.print_exc()
         if 'cursor' in locals():
@@ -809,6 +597,298 @@ def get_area_average_price(region):
         return None
 
 
+def get_area_statistics(area_name: str, city: str = None) -> Dict:
+    """获取区域统计信息，支持全国城市数据查询
+    
+    Args:
+        area_name: 区域名称（如：海淀、朝阳等）
+        city: 城市名称（可选，如：北京、上海等）
+    
+    Returns:
+        统计信息字典，包含:
+        - basic_stats: 基础统计
+        - layout_distribution: 户型分布
+        - year_distribution: 建设年代分布
+        - price_distribution: 价格段分布
+        - elevator_stats: 电梯情况统计
+        - orientation_stats: 朝向分布
+        - data_source: 数据来源标识
+    """
+    connection = get_db_connection()
+    if not connection:
+        return {
+            'error': '数据库连接失败',
+            'data_available': False
+        }
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        
+        # 判断数据来源：优先查询北京数据，如果没有则查询全国数据
+        data_source = 'beijing'
+
+        # 1. 基础统计
+        stats_query = f"""
+        SELECT 
+            COUNT(*) as total_listings,
+            ROUND(AVG(total_price), 2) as avg_total_price,
+            ROUND(AVG(price_per_sqm), 2) as avg_unit_price,
+            MIN(total_price) as min_price,
+            MAX(total_price) as max_price,
+            ROUND(AVG(area), 2) as avg_size,
+            COUNT(DISTINCT community) as distinct_communities
+        FROM beijing_house_info 
+        WHERE 
+            region LIKE '%{area_name}%' 
+            OR business_area LIKE '%{area_name}%'
+            OR community LIKE '%{area_name}%'
+        """
+
+        print(f"📊 执行基础统计查询...")
+        cursor.execute(stats_query)
+        stats = cursor.fetchone()
+        print(f"📊 基础统计结果: {stats}")
+
+        # 如果北京数据为空，尝试查询全国数据
+        if not stats or stats.get('total_listings', 0) == 0:
+            print(f"⚠️ 北京数据库未找到 {area_name} 的数据，尝试查询全国数据...")
+            
+            # 查询全国数据（current_price表）
+            national_stats = _get_national_area_statistics(cursor, area_name, city)
+            
+            if national_stats and national_stats.get('data_available'):
+                cursor.close()
+                connection.close()
+                return national_stats
+            
+            # 如果全国数据也没有，返回空结果
+            print(f"⚠️ 未找到 {area_name} 的任何数据")
+            cursor.close()
+            connection.close()
+            return {
+                'error': f'未找到区域 {area_name} 的数据',
+                'data_available': False,
+                'area_name': area_name,
+                'city': city
+            }
+
+        # 2. 户型分布统计
+        layout_query = f"""
+        SELECT 
+            IFNULL(layout, '未知') as layout,
+            COUNT(*) as count,
+            ROUND(AVG(total_price), 2) as avg_price,
+            ROUND(AVG(price_per_sqm), 2) as avg_unit_price,
+            ROUND(AVG(area), 2) as avg_size
+        FROM beijing_house_info 
+        WHERE 
+            (region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%')
+        GROUP BY IFNULL(layout, '未知')
+        ORDER BY count DESC
+        LIMIT 10
+        """
+
+        cursor.execute(layout_query)
+        layout_distribution = cursor.fetchall()
+
+        # 3. 建设年代分布
+        build_year_query = f"""
+        SELECT 
+            CASE 
+                WHEN build_year IS NULL THEN '未知年代'
+                WHEN build_year < 1990 THEN '1990年以前'
+                WHEN build_year BETWEEN 1990 AND 1999 THEN '1990-1999年'
+                WHEN build_year BETWEEN 2000 AND 2009 THEN '2000-2009年'
+                WHEN build_year BETWEEN 2010 AND 2019 THEN '2010-2019年'
+                WHEN build_year >= 2020 THEN '2020年以后'
+                ELSE '未知年代'
+            END as build_period,
+            COUNT(*) as count,
+            ROUND(AVG(total_price), 2) as avg_total_price,
+            ROUND(AVG(price_per_sqm), 2) as avg_unit_price
+        FROM beijing_house_info 
+        WHERE 
+            region LIKE '%{area_name}%' 
+            OR business_area LIKE '%{area_name}%'
+        GROUP BY build_period
+        ORDER BY 
+            CASE 
+                WHEN build_period = '未知年代' THEN 9999
+                WHEN build_period = '1990年以前' THEN 1
+                WHEN build_period = '1990-1999年' THEN 2
+                WHEN build_period = '2000-2009年' THEN 3
+                WHEN build_period = '2010-2019年' THEN 4
+                ELSE 5
+            END
+        """
+
+        cursor.execute(build_year_query)
+        year_distribution = cursor.fetchall()
+
+        # 4. 价格段分布
+        price_dist_query = f"""
+        SELECT 
+            CASE 
+                WHEN total_price < 200 THEN '200万以下'
+                WHEN total_price < 400 THEN '200-400万'
+                WHEN total_price < 600 THEN '400-600万'
+                WHEN total_price < 800 THEN '600-800万'
+                WHEN total_price < 1000 THEN '800-1000万'
+                WHEN total_price < 1500 THEN '1000-1500万'
+                WHEN total_price < 2000 THEN '1500-2000万'
+                ELSE '2000万以上'
+            END as price_range,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM beijing_house_info 
+                  WHERE region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%'), 2) as percentage
+        FROM beijing_house_info 
+        WHERE region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%'
+        GROUP BY price_range
+        ORDER BY MIN(total_price)
+        """
+
+        cursor.execute(price_dist_query)
+        price_distribution = cursor.fetchall()
+
+        # 5. 电梯情况统计
+        elevator_query = f"""
+        SELECT 
+            IFNULL(has_elevator, '未知') as has_elevator,
+            COUNT(*) as count,
+            ROUND(AVG(total_price), 2) as avg_total_price
+        FROM beijing_house_info 
+        WHERE region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%'
+        GROUP BY IFNULL(has_elevator, '未知')
+        ORDER BY count DESC
+        """
+
+        cursor.execute(elevator_query)
+        elevator_stats = cursor.fetchall()
+
+        # 6. 朝向分布
+        orientation_query = f"""
+        SELECT 
+            IFNULL(orientation, '未知') as orientation,
+            COUNT(*) as count,
+            ROUND(AVG(total_price), 2) as avg_total_price
+        FROM beijing_house_info 
+        WHERE region LIKE '%{area_name}%' OR business_area LIKE '%{area_name}%'
+        GROUP BY IFNULL(orientation, '未知')
+        ORDER BY count DESC
+        LIMIT 8
+        """
+
+        cursor.execute(orientation_query)
+        orientation_stats = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        result = {
+            'data_available': True,
+            'data_source': data_source,
+            'area_name': area_name,
+            'city': city or '北京',
+            'basic_stats': stats,
+            'layout_distribution': layout_distribution,
+            'year_distribution': year_distribution,
+            'price_distribution': price_distribution,
+            'elevator_stats': elevator_stats,
+            'orientation_stats': orientation_stats,
+            'query_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+        print(f"✅ 统计查询完成，数据来源: {data_source}")
+        return result
+
+    except Exception as e:
+        print(f"❌ 统计查询失败: {e}")
+        import traceback
+        traceback.print_exc()
+        if 'cursor' in locals():
+            cursor.close()
+        if connection:
+            connection.close()
+        return {
+            'error': f'查询失败: {str(e)}',
+            'data_available': False,
+            'area_name': area_name
+        }
+
+
+def _get_national_area_statistics(cursor, area_name: str, city: str = None) -> Dict:
+    """查询全国数据库的区域统计信息（current_price表）"""
+    try:
+        # 构建查询条件
+        where_conditions = []
+        if city:
+            where_conditions.append(f"city_name LIKE '%{city}%'")
+        where_conditions.append(f"(district_name LIKE '%{area_name}%' OR city_name LIKE '%{area_name}%')")
+        where_clause = " AND ".join(where_conditions)
+        
+        # 基础统计
+        stats_query = f"""
+        SELECT 
+            COUNT(DISTINCT city_name) as total_cities,
+            COUNT(DISTINCT district_name) as total_districts,
+            ROUND(AVG(district_avg_price), 2) as avg_unit_price,
+            MIN(district_avg_price) as min_price,
+            MAX(district_avg_price) as max_price,
+            SUM(listing_count) as total_listings
+        FROM current_price 
+        WHERE {where_clause}
+        """
+        
+        cursor.execute(stats_query)
+        stats = cursor.fetchone()
+        
+        if not stats or stats.get('total_listings', 0) == 0:
+            return {'data_available': False}
+        
+        # 价格分布
+        price_dist_query = f"""
+        SELECT 
+            district_name,
+            district_avg_price,
+            listing_count,
+            district_ratio
+        FROM current_price 
+        WHERE {where_clause}
+        ORDER BY district_avg_price DESC
+        LIMIT 20
+        """
+        
+        cursor.execute(price_dist_query)
+        price_distribution = cursor.fetchall()
+        
+        return {
+            'data_available': True,
+            'data_source': 'national',
+            'area_name': area_name,
+            'city': city,
+            'basic_stats': {
+                'total_listings': int(stats['total_listings'] or 0),
+                'avg_unit_price': float(stats['avg_unit_price'] or 0),
+                'min_price': float(stats['min_price'] or 0),
+                'max_price': float(stats['max_price'] or 0),
+                'total_cities': int(stats['total_cities'] or 0),
+                'total_districts': int(stats['total_districts'] or 0)
+            },
+            'price_distribution': price_distribution,
+            'query_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+    except Exception as e:
+        print(f"❌ 全国数据查询失败: {e}")
+        return {'data_available': False}
+
+
 if __name__ == "__main__":
-    a=query_house_data_by_area("海淀")
-    print(a)
+    # 测试代码
+    print("Testing Beijing area...")
+    result_bj = get_area_statistics("海淀")
+    print(f"Beijing Result keys: {result_bj.keys()}")
+    
+    print("\nTesting National area...")
+    result_national = get_area_statistics("浦东", city="上海")
+    print(f"National Result: {result_national.get('data_source')} - {result_national.get('area_name')}")

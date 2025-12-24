@@ -27,6 +27,118 @@ class ReportDatabase:
 
     # ============ AI生成报告的核心方法 ============
 
+    def generate_ai_report_stream(self, area: str, report_type: str = "市场分析",
+                                  city: str = None, user_id: str = None):
+        """
+        使用AI生成区域分析报告（流式输出）
+        
+        Args:
+            area: 区域名称
+            report_type: 报告类型
+            city: 城市
+            user_id: 用户ID
+            
+        Yields:
+            生成进度信息的字典
+        """
+        try:
+            # 1. 获取区域统计信息
+            yield {"status": "processing", "step": "fetching_data", "message": "正在获取区域统计数据..."}
+            area_statistics = get_area_statistics(area, city=city)
+            
+            # 2. 使用AI生成报告内容（流式）
+            yield {"status": "processing", "step": "generating_content", "message": "正在生成报告内容..."}
+            
+            # 准备提示词
+            prompt = self.ai_service._create_report_prompt(area, area_statistics, report_type)
+            
+            # 流式调用Spark API
+            report_content = ""
+            for chunk in self._stream_spark_response(prompt):
+                report_content += chunk
+                yield {
+                    "status": "streaming",
+                    "step": "content_generation",
+                    "chunk": chunk,
+                    "current_length": len(report_content)
+                }
+            
+            # 3. 格式化报告内容
+            yield {"status": "processing", "step": "formatting", "message": "正在格式化报告..."}
+            formatted_content = self.ai_service.format_report_content(
+                content=report_content,
+                format_type="professional"
+            )
+            
+            # 4. 生成报告标题和摘要
+            title = f"{area}{report_type}报告"
+            summary = self._generate_summary_from_content(formatted_content)
+            
+            # 5. 生成封面图片
+            yield {"status": "processing", "step": "generating_image", "message": "正在生成封面图片..."}
+            cover_image_filename = self._generate_and_save_image(
+                title=title,
+                summary=summary,
+                area=area
+            )
+            
+            # 6. 保存报告到数据库
+            yield {"status": "processing", "step": "saving", "message": "正在保存报告..."}
+            result = self.create_report(
+                title=title,
+                summary=summary,
+                content=formatted_content,
+                cover_image_filename=cover_image_filename,
+                report_type=report_type,
+                city=city or area,
+                user_id=user_id
+            )
+            
+            # 7. 返回完整结果
+            yield {
+                "status": "completed",
+                "step": "done",
+                "message": "报告生成完成",
+                "data": {
+                    "report_id": result['report_id'],
+                    "title": title,
+                    "summary": summary,
+                    "content_preview": formatted_content[:200] + "...",
+                    "cover_image": cover_image_filename,
+                    "area": area,
+                    "report_type": report_type,
+                    "generated_at": datetime.now().isoformat(),
+                    "ai_generated": True
+                }
+            }
+            
+        except Exception as e:
+            yield {
+                "status": "error",
+                "step": "failed",
+                "message": f"AI生成报告失败: {str(e)}"
+            }
+    
+    def _stream_spark_response(self, prompt: str):
+        """
+        流式调用Spark API并逐块返回内容
+        
+        Args:
+            prompt: 提示词
+            
+        Yields:
+            生成的文本块
+        """
+        # 使用Spark客户端的流式输出
+        # 注意：这里需要修改spark_client以支持真正的流式回调
+        # 当前实现为简化版本，实际应该在WebSocket的on_message中yield
+        response = self.ai_service._call_spark_api(prompt)
+        
+        # 模拟流式输出：将完整响应分块返回
+        chunk_size = 50  # 每次返回50个字符
+        for i in range(0, len(response), chunk_size):
+            yield response[i:i+chunk_size]
+    
     def generate_ai_report(self, area: str, report_type: str = "市场分析",
                            city: str = None, user_id: str = None) -> Dict:
         """
@@ -43,7 +155,7 @@ class ReportDatabase:
         """
         try:
             # 1. 获取区域统计信息
-            area_statistics = get_area_statistics(area)
+            area_statistics = get_area_statistics(area, city=city)
 
             # 2. 使用AI生成报告内容
             report_content = self.ai_service.generate_report_with_spark(
@@ -97,8 +209,49 @@ class ReportDatabase:
             raise Exception(f"AI生成报告失败: {str(e)}")
 
     def _generate_summary_from_content(self, content: str) -> str:
-        """从报告内容中提取摘要"""
-        # 简单实现：取前200个字符作为摘要
+        """从报告内容中提取摘要 - 增强版"""
+        # 尝试提取 "执行摘要" 或 "摘要" 部分
+        lines = content.split('\n')
+        summary_lines = []
+        in_summary = False
+        
+        for line in lines:
+            clean_line = line.strip().replace('#', '').strip()
+            
+            # 检测摘要开始
+            if '摘要' in clean_line and len(clean_line) < 10:
+                in_summary = True
+                continue
+                
+            # 检测摘要结束（遇到下一个标题）
+            if in_summary and line.strip().startswith('#'):
+                break
+                
+            # 收集摘要内容
+            if in_summary and line.strip():
+                summary_lines.append(line.strip())
+                
+        # 如果提取到了摘要
+        if summary_lines:
+            summary = ' '.join(summary_lines)
+            if len(summary) > 300:
+                return summary[:297] + "..."
+            return summary
+            
+        # 如果没有找到明确的摘要部分，提取第一段非标题内容
+        first_paragraph = ""
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith('#') and len(line) > 50:
+                first_paragraph = line
+                break
+                
+        if first_paragraph:
+            if len(first_paragraph) > 200:
+                return first_paragraph[:197] + "..."
+            return first_paragraph
+            
+        # 保底方案
         if len(content) > 200:
             return content[:197] + "..."
         return content
@@ -130,6 +283,77 @@ class ReportDatabase:
 
         # 如果生成失败，返回默认图片
         return "default_report_cover.png"
+
+    def create_report(self, title: str, summary: str, content: str,
+                      cover_image_filename: str = None, report_type: str = None,
+                      city: str = None, user_id: str = None) -> Dict:
+        """
+        创建报告记录
+
+        Args:
+            title: 报告标题
+            summary: 报告摘要
+            content: 报告内容
+            cover_image_filename: 封面图片文件名
+            report_type: 报告类型
+            city: 城市
+            user_id: 用户ID
+
+        Returns:
+            包含report_id的字典
+        """
+        connection = get_db_connection()
+        if not connection:
+            raise Exception("数据库连接失败")
+
+        try:
+            cursor = connection.cursor(pymysql.cursors.DictCursor)
+
+            # 生成唯一的文件名
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            txt_filename = f"report_{timestamp}.txt"
+            txt_filepath = os.path.join(self.txt_path, txt_filename)
+
+            # 保存文本内容
+            with open(txt_filepath, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            # 构建封面图片路径
+            cover_image_path = None
+            if cover_image_filename:
+                cover_image_path = os.path.join(self.img_path, cover_image_filename)
+
+            # 插入数据库记录
+            insert_query = """
+                INSERT INTO reports (
+                    title, summary, txt_path, cover_image_path,
+                    type, city, user_id,
+                    created_at, updated_at, status
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), 'completed')
+            """
+
+            cursor.execute(insert_query, (
+                title, summary, txt_filepath, cover_image_path,
+                report_type, city, user_id
+            ))
+
+            report_id = cursor.lastrowid
+            connection.commit()
+
+            return {
+                "report_id": report_id,
+                "txt_path": txt_filepath,
+                "cover_image_path": cover_image_path
+            }
+
+        except Exception as e:
+            connection.rollback()
+            raise Exception(f"创建报告失败: {str(e)}")
+
+        finally:
+            if connection:
+                cursor.close()
+                connection.close()
 
     # ============ 格式化现有内容的方法 ============
 

@@ -73,16 +73,11 @@
     
     <!-- 主内容区 -->
     <main class="report-main">
-      <!-- 报告类型选择 -->
-      <div class="report-types">
-        <!-- 动态加载报告类型 -->
-      </div>
-      
       <!-- 生成报告按钮 -->
       <div style="text-align: center; margin: 24px 0;">
         <button class="btn btn-primary generate-btn">
           <i data-lucide="file-plus"></i>
-          生成报告
+          生成自定义报告
         </button>
       </div>
       
@@ -114,41 +109,6 @@
         </div>
       </div>
       
-      <!-- 报告详情区域 -->
-      <div class="report-detail" id="report-detail" style="display: none;">
-        <div class="detail-header">
-          <h2 class="detail-title">报告标题</h2>
-          <p class="detail-meta">
-            <span><i data-lucide="calendar"></i> 2024-12-10</span>
-            <span><i data-lucide="eye"></i> 1,234 次查看</span>
-          </p>
-        </div>
-        
-        <div class="detail-content">
-          <p>报告内容摘要，包含主要发现和数据指标。</p>
-          <div class="detail-chart" id="detail-chart" style="height: 400px;"></div>
-        </div>
-        
-        <div class="detail-actions">
-          <button class="btn-share">
-            <i class="fas fa-share-alt"></i>
-            分享
-          </button>
-        </div>
-        
-        <div class="detail-footer">
-          <button class="btn btn-secondary" id="backBtn">
-            <i data-lucide="arrow-left"></i>
-            返回报告列表
-          </button>
-        </div>
-      </div>
-      
-      <!-- 在报告类型选择区域后添加未登录提示 -->
-      <div class="report-types">
-        <!-- 报告类型卡片由 JS 动态生成 -->
-      </div>
-
       <!-- ✅ 添加未登录用户功能提示 -->
       <div class="guest-notice" id="guestNotice" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
           <div style="display: flex; align-items: center; gap: 15px;">
@@ -189,47 +149,52 @@
             <form id="generateReportForm">
               <div class="form-group">
                 <label><i data-lucide="tag"></i> 报告类型</label>
-                <select name="type" required>
-                  <option value="">请选择报告类型</option>
-                  <option value="market_analysis">市场趋势报告</option>
-                  <option value="district_analysis">城市分析报告</option>
-                  <option value="comparison">城市对比报告</option>
-                  <option value="investment">投资价值报告</option>
-                </select>
+                <div class="report-type-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px;">
+                  <div class="report-type-option" data-type="市场趋势报告" style="padding: 16px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                      <i data-lucide="trending-up" style="width: 20px; height: 20px; color: white;"></i>
+                    </div>
+                    <h4 style="font-size: 14px; font-weight: 600; margin: 0 0 4px 0;">市场趋势报告</h4>
+                    <p style="font-size: 12px; color: #6b7280; margin: 0;">全国及重点城市房价趋势分析</p>
+                  </div>
+                  <div class="report-type-option" data-type="城市分析报告" style="padding: 16px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                      <i data-lucide="map-pin" style="width: 20px; height: 20px; color: white;"></i>
+                    </div>
+                    <h4 style="font-size: 14px; font-weight: 600; margin: 0 0 4px 0;">城市分析报告</h4>
+                    <p style="font-size: 12px; color: #6b7280; margin: 0;">单一城市深度市场分析</p>
+                  </div>
+                  <div class="report-type-option" data-type="城市对比报告" style="padding: 16px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                      <i data-lucide="git-compare" style="width: 20px; height: 20px; color: white;"></i>
+                    </div>
+                    <h4 style="font-size: 14px; font-weight: 600; margin: 0 0 4px 0;">城市对比报告</h4>
+                    <p style="font-size: 12px; color: #6b7280; margin: 0;">多城市横向对比分析</p>
+                  </div>
+                  <div class="report-type-option" data-type="投资价值报告" style="padding: 16px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                      <i data-lucide="dollar-sign" style="width: 20px; height: 20px; color: white;"></i>
+                    </div>
+                    <h4 style="font-size: 14px; font-weight: 600; margin: 0 0 4px 0;">投资价值报告</h4>
+                    <p style="font-size: 12px; color: #6b7280; margin: 0;">房产投资回报率分析</p>
+                  </div>
+                </div>
+                <input type="hidden" name="report_type" required>
               </div>
               <div class="form-group">
-                <label><i data-lucide="map-pin"></i> 目标城市</label>
-                <input type="text" name="city" placeholder="例如：北京" required>
+                <label><i data-lucide="map-pin"></i> 城市（可选）</label>
+                <input type="text" name="city" placeholder="例如：北京">
               </div>
               <div class="form-group">
                 <label><i data-lucide="layers"></i> 分析区域（可选）</label>
-                <input type="text" name="districts" placeholder="多个区域用逗号分隔，例如：朝阳区,海淀区">
-                <small>留空则分析整个城市</small>
+                <input type="text" name="area" id="areaInput" placeholder="例如：海淀区">
+                <small id="areaHint" style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">根据报告类型自动调整</small>
               </div>
-              <div class="form-group">
-                <label><i data-lucide="calendar"></i> 数据时间范围（可选）</label>
-                <div class="date-range">
-                  <input type="date" name="start_date">
-                  <span>至</span>
-                  <input type="date" name="end_date">
-                </div>
-              </div>
-              <div class="form-group">
-                <label><i data-lucide="check-square"></i> 分析指标</label>
-                <div class="checkbox-group">
-                  <label><input type="checkbox" name="metrics" value="price_trend" checked> 价格趋势</label>
-                  <label><input type="checkbox" name="metrics" value="supply_demand"> 供需关系</label>
-                  <label><input type="checkbox" name="metrics" value="investment_return"> 投资回报</label>
-                  <label><input type="checkbox" name="metrics" value="market_activity"> 市场活跃度</label>
-                </div>
-              </div>
-              <div class="form-group">
-                <label><i data-lucide="file-text"></i> 输出格式</label>
-                <div class="radio-group">
-                  <label><input type="radio" name="format" value="pdf" checked> PDF</label>
-                  <label><input type="radio" name="format" value="html"> HTML</label>
-                  <label><input type="radio" name="format" value="markdown"> Markdown</label>
-                </div>
+              <div class="form-group" style="background: #f0f9ff; padding: 12px; border-radius: 8px; border-left: 3px solid #3b82f6;">
+                <p style="margin: 0; font-size: 13px; color: #1e40af;">
+                  <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                  报告将基于最新的市场数据生成，预计需要 30-60 秒
+                </p>
               </div>
             </form>
           </div>

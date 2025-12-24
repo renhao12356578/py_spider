@@ -2,14 +2,14 @@
 报告相关路由
 整合报告CRUD、AI生成、格式化等功能
 """
-from flask import Blueprint, request, jsonify, send_file
-from datetime import datetime
 import os
-
-# 导入服务层
+import threading
+from datetime import datetime
+from flask import Blueprint, request, jsonify
+from utils.auth import require_auth
 from report.reportDB import ReportDatabase
+from report.task_manager import task_manager
 from tools.house_query import get_area_statistics
-from utils import require_auth
 
 # 蓝图定义
 reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
@@ -235,6 +235,142 @@ def delete_report(report_id):
         }), 500
 
 
+# ============ AI生成报告（异步） ============
+
+@reports_bp.route('/generate/ai/async', methods=['POST'])
+@require_auth
+def generate_ai_report_async():
+    """使用AI生成区域分析报告（异步模式）"""
+    try:
+        data = request.get_json()
+        current_user = request.user_id
+
+        # 验证：至少提供area或city之一
+        area = data.get('area', '').strip()
+        city = data.get('city', '').strip()
+        
+        if not area and not city:
+            return jsonify({
+                "code": 400,
+                "message": "请至少提供城市或区域之一"
+            }), 400
+        
+        # 如果area为空，使用city作为area
+        if not area:
+            area = city
+        
+        # 创建任务
+        task_id = task_manager.create_task('generate_report', {
+            'area': area,
+            'city': city,
+            'report_type': data.get('report_type', '市场分析'),
+            'user_id': current_user
+        })
+        
+        # 后台线程执行报告生成
+        def generate_in_background():
+            try:
+                task_manager.update_task(task_id, status='processing', progress=10, message='正在生成报告...')
+                
+                result = db.generate_ai_report(
+                    area=area,
+                    report_type=data.get('report_type', '市场分析'),
+                    city=city if city else None,
+                    user_id=current_user
+                )
+                
+                task_manager.update_task(
+                    task_id, 
+                    status='completed', 
+                    progress=100, 
+                    message='报告生成完成',
+                    result=result
+                )
+            except Exception as e:
+                task_manager.update_task(
+                    task_id,
+                    status='failed',
+                    progress=0,
+                    message='报告生成失败',
+                    error=str(e)
+                )
+        
+        thread = threading.Thread(target=generate_in_background)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            "code": 200,
+            "data": {
+                "task_id": task_id,
+                "status": "pending",
+                "message": "报告生成任务已创建"
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"创建任务失败: {str(e)}"
+        }), 500
+
+
+@reports_bp.route('/task/<task_id>', methods=['GET'])
+@require_auth
+def get_task_status(task_id):
+    """查询任务状态"""
+    try:
+        task = task_manager.get_task(task_id)
+        
+        if not task:
+            return jsonify({
+                "code": 404,
+                "message": "任务不存在"
+            }), 404
+        
+        return jsonify({
+            "code": 200,
+            "data": task
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"查询任务失败: {str(e)}"
+        }), 500
+
+
+@reports_bp.route('/tasks/user', methods=['GET'])
+@require_auth
+def get_user_tasks():
+    """获取当前用户的所有任务"""
+    try:
+        current_user = request.user_id
+        all_tasks = []
+        
+        # 遍历所有任务，筛选当前用户的任务
+        for task_id, task in task_manager.tasks.items():
+            if task.get('params', {}).get('user_id') == current_user:
+                all_tasks.append(task)
+        
+        # 按创建时间排序
+        all_tasks.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        return jsonify({
+            "code": 200,
+            "data": {
+                "tasks": all_tasks,
+                "total": len(all_tasks)
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"获取任务列表失败: {str(e)}"
+        }), 500
+
+
 # ============ AI生成报告 ============
 
 @reports_bp.route('/generate/ai', methods=['POST'])
@@ -263,6 +399,53 @@ def generate_ai_report():
             "data": result,
             "message": "AI报告生成成功"
         }), 201
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"AI报告生成失败: {str(e)}"
+        }), 500
+
+
+@reports_bp.route('/generate/ai/stream', methods=['POST'])
+@require_auth
+def generate_ai_report_stream():
+    """使用AI生成区域分析报告（流式输出）"""
+    try:
+        data = request.get_json()
+        current_user = request.user_id
+
+        # 验证：至少提供area或city之一
+        area = data.get('area', '').strip()
+        city = data.get('city', '').strip()
+        
+        if not area and not city:
+            return jsonify({
+                "code": 400,
+                "message": "请至少提供城市或区域之一"
+            }), 400
+        
+        # 如果area为空，使用city作为area
+        if not area:
+            area = city
+
+        def generate():
+            """SSE生成器"""
+            import json
+            for event in db.generate_ai_report_stream(
+                area=area,
+                report_type=data.get('report_type', '市场分析'),
+                city=city if city else None,
+                user_id=current_user
+            ):
+                # 格式化为SSE事件
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+        return generate(), 200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
 
     except Exception as e:
         return jsonify({
@@ -315,6 +498,7 @@ def get_area_statistics_api():
     """获取区域统计信息"""
     try:
         area = request.args.get('area')
+        city = request.args.get('city')
 
         if not area:
             return jsonify({
@@ -322,12 +506,13 @@ def get_area_statistics_api():
                 "message": "缺少查询参数: area"
             }), 400
 
-        statistics = get_area_statistics(area)
+        statistics = get_area_statistics(area, city=city)
 
         return jsonify({
             "code": 200,
             "data": {
                 "area": area,
+                "city": city,
                 "statistics": statistics,
                 "retrieved_at": datetime.now().isoformat()
             }

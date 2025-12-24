@@ -113,7 +113,7 @@ class SparkClient:
             code = data['header']['code']
 
             if code != 0:
-                print(f'\n[ERROR] 请求错误: {code}, {data}')
+                print(f'\n[ERROR] 请求错误: {code}, {data}', flush=True)
                 ws.close()
             else:
                 choices = data["payload"]["choices"]
@@ -129,7 +129,7 @@ class SparkClient:
                     ws.close()
 
         def on_error(ws, error):
-            print(f"\n[ERROR] 连接错误: {error}")
+            print(f"\n[ERROR] 连接错误: {error}", flush=True)
 
         def on_close(ws, close_status_code, close_msg):
             pass
