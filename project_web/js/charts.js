@@ -81,34 +81,7 @@ const Charts = {
     
     return {
       tooltip: {
-        trigger: 'item',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderColor: '#e5e7eb',
-        borderWidth: 1,
-        padding: [12, 16],
-        textStyle: {
-          color: '#1f2937',
-          fontSize: 14
-        },
-        formatter: function(params) {
-          if (!params.data) return params.name + '<br/>暂无数据';
-          return `
-            <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${params.name}</div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span style="color: #6b7280;">均价</span>
-              <span style="font-weight: 600; color: #2563eb;">${params.data.value?.toLocaleString() || '--'} 元/㎡</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span style="color: #6b7280;">挂牌数</span>
-              <span style="font-weight: 600;">${params.data.listing_count?.toLocaleString() || '--'} 套</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span style="color: #6b7280;">城市数</span>
-              <span style="font-weight: 600;">${params.data.city_count || '--'} 个</span>
-            </div>
-            <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">${params.data.cities || ''}</div>
-          `;
-        }
+        show: false
       },
       visualMap: {
         min: 0,

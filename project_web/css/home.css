@@ -692,3 +692,117 @@
   color: var(--text-primary);
 }
 
+/* 省份悬停弹窗 */
+.province-hover-popup {
+  position: fixed;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
+  padding: var(--spacing-md);
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  min-width: 420px;
+  max-width: 500px;
+}
+
+.province-hover-popup.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 2px solid var(--primary-color);
+  margin-bottom: var(--spacing-md);
+}
+
+.popup-province-name {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.popup-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.popup-stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.popup-stat-value {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.popup-cities {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.6;
+}
+
+.popup-chart-container {
+  height: 280px;
+  width: 100%;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-sm);
+}
+
+.popup-cities-list {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: var(--spacing-sm);
+}
+
+.popup-city-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  transition: background 0.2s ease;
+}
+
+.popup-city-item:hover {
+  background: var(--bg-secondary);
+}
+
+.popup-city-name {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.popup-city-price {
+  font-size: var(--text-sm);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.popup-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-muted);
+}
+

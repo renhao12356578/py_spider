@@ -830,27 +830,58 @@ function renderHouseList(houses) {
   }
   
   let html = '';
-  houses.forEach(house => {
+  houses.forEach((house, index) => {
+    // 模拟一些状态标签
+    const badges = [];
+    if (index < 3 && currentPage === 1) badges.push('<div class="house-badge hot">热门</div>');
+    else if (index % 5 === 0) badges.push('<div class="house-badge new">新上</div>');
+    
     html += `
       <div class="house-item" data-house-id="${house.house_id}">
         <div class="house-image">
-          <i data-lucide="home" style="width: 48px; height: 48px;"></i>
+          ${badges.join('')}
+          <i data-lucide="home" style="width: 56px; height: 56px;"></i>
         </div>
+        
         <div class="house-info">
           <div class="house-title">${house.region || '北京'} · ${house.layout || '暂无户型'}</div>
+          
           <div class="house-meta">
-            <span>${house.area || '-'}㎡</span>
-            <span>${house.orientation || '-'}</span>
-            <span>${house.floor || '-'}层</span>
-            <span>${house.has_elevator || '-'}</span>
+            <div class="meta-item">
+              <i data-lucide="maximize-2"></i>
+              <span>${house.area || '-'}㎡</span>
+            </div>
+            <div class="meta-item">
+              <i data-lucide="compass"></i>
+              <span>${house.orientation || '-'}</span>
+            </div>
+            <div class="meta-item">
+              <i data-lucide="layers"></i>
+              <span>${house.floor || '-'}层</span>
+            </div>
+            <div class="meta-item">
+              <i data-lucide="move-vertical"></i>
+              <span>${house.has_elevator || '-'}</span>
+            </div>
           </div>
+          
           <div class="house-tags">
-            ${house.tags ? house.tags.split(' ').map(tag => `<span class="tag">${tag}</span>`).join('') : ''}
+            ${house.tags ? house.tags.split(' ').map(tag => `<span class="tag tag-primary">${tag}</span>`).join('') : ''}
           </div>
         </div>
+        
         <div class="house-price">
-          <div class="house-total-price">${house.total_price?.toFixed(0) || '-'}<span>万</span></div>
-          <div class="house-unit-price">${house.price_per_sqm?.toLocaleString() || '-'}元/㎡</div>
+          <div class="house-total-price">${house.total_price?.toFixed(0) || '-'}<span class="price-unit">万</span></div>
+          <div class="house-unit-price">${house.price_per_sqm?.toLocaleString() || '-'} 元/㎡</div>
+        </div>
+        
+        <div class="house-actions">
+          <button class="action-btn favorite-btn" title="收藏房源">
+            <i data-lucide="heart"></i>
+          </button>
+          <button class="action-btn" title="对比房源">
+            <i data-lucide="repeat"></i>
+          </button>
         </div>
       </div>
     `;
@@ -858,6 +889,22 @@ function renderHouseList(houses) {
   
   container.innerHTML = html;
   lucide.createIcons();
+  
+  // 绑定收藏按钮事件
+  container.querySelectorAll('.favorite-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      this.classList.toggle('active');
+      const icon = this.querySelector('i');
+      if (this.classList.contains('active')) {
+        icon.style.fill = 'var(--danger-color)';
+        showToast('已加入收藏', 'success');
+      } else {
+        icon.style.fill = 'none';
+        showToast('已取消收藏');
+      }
+    });
+  });
 }
 
 /**

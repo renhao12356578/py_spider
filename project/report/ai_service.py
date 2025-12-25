@@ -2,6 +2,7 @@
 import json
 import threading
 from typing import Dict, List, Optional
+from datetime import datetime
 import requests
 from PIL import Image, ImageDraw, ImageFont
 import io
@@ -45,64 +46,220 @@ class LLMAIService:
         prompt = self._create_report_prompt(area, area_statistics, report_type)
 
         # 调用星火大模型
-        response = self._call_spark_api(prompt)
+        max_retries = 2
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                response = self._call_spark_api(prompt)
+                
+                # 解析响应，提取报告内容
+                report_content = self._extract_report_from_response(response)
+                
+                # 验证内容
+                is_valid, message = self.validate_report_content(report_content)
+                if is_valid:
+                    return report_content
+                
+                print(f"⚠️ 报告验证失败 (尝试 {attempt+1}/{max_retries}): {message}")
+                last_error = message
+                
+            except Exception as e:
+                print(f"❌ AI调用失败 (尝试 {attempt+1}/{max_retries}): {e}")
+                last_error = str(e)
+        
+        # 如果重试都失败了，返回备用内容
+        return self._generate_fallback_content(area, report_type, last_error)
 
-        # 解析响应，提取报告内容
-        report_content = self._extract_report_from_response(response)
+    def validate_report_content(self, content: str) -> tuple:
+        """验证报告内容有效性"""
+        if not content:
+            return False, "内容为空"
+            
+        if len(content) < 300:
+            return False, "报告内容过短"
+        
+        # 检查必须包含的关键词
+        required_keywords = ['分析', '市场', '价格']
+        missing = [k for k in required_keywords if k not in content]
+        if len(missing) > 1:  # 允许缺失一个，太严可能会误杀
+            return False, f"缺少关键内容: {', '.join(missing)}"
+            
+        # 检查是否包含拒绝生成的语句
+        forbidden_phrases = ["我无法", "抱歉", "作为AI", "I cannot", "As an AI"]
+        for phrase in forbidden_phrases:
+            if phrase in content:
+                return False, "报告包含拒绝生成或错误信息"
+                
+        return True, "验证通过"
 
-        return report_content
+    def _generate_fallback_content(self, area: str, report_type: str, error: str) -> str:
+        """生成降级报告内容"""
+        return f"""# {area}{report_type}报告
+
+## ⚠️ 生成提示
+由于系统繁忙或网络原因，暂时无法生成完整的详细分析报告。
+
+## 区域概况
+**{area}** 是一个受关注的区域。建议您稍后重试生成，或查看该区域的基础统计数据。
+
+## 错误信息
+{error}
+
+## 建议
+1. 检查网络连接
+2. 稍后重试
+3. 尝试生成其他区域的报告
+"""
 
     def _create_report_prompt(self, area: str, statistics: Dict, report_type: str) -> str:
-        """创建报告生成提示词"""
+        """创建报告生成提示词 - 增强版"""
+        
+        # 检查数据可用性
+        if not statistics.get('data_available', True):
+            return self._create_fallback_prompt(area, report_type)
+        
+        # 提取关键数据
+        data_source = statistics.get('data_source', 'beijing')
+        
+        # 构建数据摘要
+        data_summary = self._format_statistics_summary(statistics)
+        
         prompt = f"""
-        你是一位专业的房地产数据分析师。请根据以下区域统计信息，生成一份专业的{report_type}报告。
+你是一位资深的房地产市场分析师，拥有10年以上的行业经验。请基于以下真实数据，撰写一份专业的{report_type}报告。
 
-        【分析区域】：{area}
+## 分析对象
+区域：{area}
+数据来源：{data_source}
+数据时间：{statistics.get('query_time', '最新')}
 
-        【区域统计信息】：
-        {json.dumps(statistics, ensure_ascii=False, indent=2)}
+## 核心数据
+{data_summary}
 
-        【报告要求】：
-        1. 报告标题：清晰明确，突出区域和分析主题
-        2. 执行摘要：概括核心发现和结论
-        3. 详细分析：包括市场现状、发展趋势、机会与挑战
-        4. 数据解读：对关键统计数据进行专业解读
-        5. 建议部分：提供针对性的市场策略或投资建议
-        6. 展望：对未来3-6个月的市场趋势进行预测
+## 报告撰写要求
 
-        【报告格式】：
-        使用标准的商业报告格式，包括：
-        - 标题
-        - 报告日期
-        - 执行摘要
-        - 正文（分章节）
-        - 数据表格（用markdown格式）
-        - 结论与建议
-        - 附录（如有）
+### 1. 结构要求
+- **标题**：{area}{report_type}报告（{datetime.now().strftime('%Y年%m月')}）
+- **执行摘要**（200-300字）：提炼核心发现，包括市场定位、价格水平、供需状况
+- **市场概况**：基于数据分析当前市场状态
+- **价格分析**：详细解读价格分布、均价水平及价格区间
+- **房源特征**：分析户型、建筑年代、配套设施等
+- **市场趋势**：基于数据推断市场走向
+- **投资建议**：针对不同需求群体提供建议
+- **风险提示**：客观指出潜在风险
 
-        【报告风格】：
-        专业、客观、数据驱动，避免主观臆断。
+### 2. 数据使用规范
+- 必须使用提供的真实数据，不得编造数据
+- 数据引用时保留2位小数
+- 涉及价格时明确单位（万元、元/㎡）
+- 百分比数据保留1位小数
 
-        请生成一份完整、专业的报告。
+### 3. 分析深度
+- 对比分析：与周边区域或市场均价对比
+- 趋势判断：基于价格分布和房源特征推断
+- 细分市场：针对不同价格段、户型的分析
+- 实用建议：针对刚需、改善、投资等不同群体
+
+### 4. 写作风格
+- 专业严谨，使用行业术语
+- 数据驱动，每个结论都有数据支撑
+- 客观中立，避免过度乐观或悲观
+- 逻辑清晰，层次分明
+- 语言简洁，避免冗余
+
+### 5. 格式规范
+- 使用Markdown格式
+- 标题层级清晰（# ## ###）
+- 数据表格使用markdown表格
+- 重要数据使用**加粗**
+- 关键结论使用> 引用块
+
+请严格按照以上要求，生成一份完整、专业、有价值的分析报告。
         """
         return prompt
+
+    def _create_fallback_prompt(self, area: str, report_type: str) -> str:
+        """创建备用提示词（无数据情况）"""
+        return f"""
+你是一位专业的房地产分析师。虽然目前暂时无法获取{area}的最新详细统计数据，但请根据你掌握的通用房地产知识和该区域的历史印象，撰写一份{report_type}框架性分析报告。
+
+重点关注：
+1. 区域宏观定位分析
+2. 通用购房建议和注意事项
+3. 市场风险提示
+4. 如何考察该区域房产的建议
+
+请注意：在报告开头明确标注"注：本报告基于通用市场分析，具体数据请以实际成交为准"。
+        """
+
+    def _format_statistics_summary(self, statistics: Dict) -> str:
+        """格式化统计数据摘要"""
+        summary = []
+        
+        # 基础数据
+        basic = statistics.get('basic_stats', {})
+        if basic:
+            summary.append("### 基础数据")
+            summary.append(f"- 房源数量：{basic.get('total_listings', 0)}")
+            summary.append(f"- 平均总价：{basic.get('avg_total_price', 0)}万")
+            summary.append(f"- 平均单价：{basic.get('avg_unit_price', 0)}元/㎡")
+            summary.append(f"- 价格范围：{basic.get('min_price', 0)} - {basic.get('max_price', 0)}万")
+            
+        # 价格分布
+        price_dist = statistics.get('price_distribution', [])
+        if price_dist:
+            summary.append("\n### 价格分布")
+            for item in price_dist[:5]: # 取前5个
+                if isinstance(item, dict):
+                    # 适配不同的数据结构
+                    range_name = item.get('price_range') or item.get('district_name')
+                    count = item.get('count') or item.get('listing_count')
+                    percent = item.get('percentage') or item.get('district_ratio')
+                    if range_name:
+                        summary.append(f"- {range_name}: {count}套 ({percent}%)")
+                        
+        # 户型分布
+        layout_dist = statistics.get('layout_distribution', [])
+        if layout_dist:
+            summary.append("\n### 户型分布")
+            for item in layout_dist[:5]:
+                summary.append(f"- {item.get('layout')}: {item.get('count')}套 (均价{item.get('avg_price')}万)")
+                
+        return "\n".join(summary)
 
     def _call_spark_api(self, prompt: str) -> str:
         """调用星火大模型API"""
         return self.spark_client.chat(prompt)
 
     def _extract_report_from_response(self, response: str) -> str:
-        """从API响应中提取报告内容"""
+        """从API响应中提取报告内容 - 增强版"""
+        if not response:
+            return "报告生成失败，请稍后重试。"
+            
         # 清理响应文本，移除可能的API格式信息
         lines = response.split('\n')
         cleaned_lines = []
+        
+        # 移除系统标记和无关内容
+        skip_markers = ['[系统]', '[API]', '```json', '---', '```python', '助手：', 'Assistant:']
 
         for line in lines:
-            # 移除一些常见的API响应格式
-            if not any(marker in line for marker in ['[系统]', '[API]', '```json', '---']):
+            # 跳过包含标记的行
+            if any(marker in line for marker in skip_markers):
+                continue
+            # 跳过空行过多的情况
+            if line.strip():
+                cleaned_lines.append(line)
+            elif cleaned_lines and cleaned_lines[-1].strip():  # 保留单个空行
                 cleaned_lines.append(line)
 
-        return '\n'.join(cleaned_lines).strip()
+        content = '\n'.join(cleaned_lines).strip()
+        
+        # 验证内容质量
+        if len(content) < 200:
+            return f"# 报告生成提示\n\n生成的内容过短，可能存在问题。原始内容：\n\n{content}"
+            
+        return content
 
     # ================= 图片生成方法 =================
 

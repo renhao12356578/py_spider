@@ -37,48 +37,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   // 当前选中的报告类型
   let selectedReportType = null;
   
-  // ========== 加载报告类型 ==========
-  async function loadReportTypes() {
-    try {
-      const response = await API.report.getTypes();
-      const types = response.types || response || [];
-      const container = document.querySelector('.report-types');
-      if (!container || !types || types.length === 0) return;
-      
-      let html = '';
-      types.forEach((type, index) => {
-        html += `
-          <div class="report-type-card ${index === 0 ? 'active' : ''}" data-type="${type.id}">
-            <div class="type-icon">
-              <i data-lucide="${type.icon || 'file-text'}"></i>
-            </div>
-            <h4>${type.name}</h4>
-            <p>${type.description || ''}</p>
-          </div>
-        `;
-      });
-      
-      container.innerHTML = html;
-      lucide.createIcons();
-      
-      // 默认选中第一个
-      if (types.length > 0) {
-        selectedReportType = types[0].id;
-      }
-      
-      // 绑定点击事件
-      container.querySelectorAll('.report-type-card').forEach(card => {
-        card.addEventListener('click', function() {
-          container.querySelectorAll('.report-type-card').forEach(c => c.classList.remove('active'));
-          this.classList.add('active');
-          selectedReportType = this.dataset.type;
-        });
-      });
-      
-    } catch (error) {
-      console.error('加载报告类型失败:', error);
-    }
-  }
+  // 报告类型已集成到生成报告模态框中，不再需要单独加载
   
   // ========== 加载报告列表 ==========
   async function loadReportList(page = 1, limit = 10) {
@@ -266,6 +225,77 @@ document.addEventListener('DOMContentLoaded', async function() {
       modal.style.zIndex = '9999';
       modal.style.background = 'rgba(0, 0, 0, 0.5)';
       lucide.createIcons();
+      
+      // 绑定报告类型选择事件
+      setTimeout(() => {
+        const typeOptions = modal.querySelectorAll('.report-type-option');
+        const hiddenInput = modal.querySelector('input[name="report_type"]');
+        const areaInput = modal.querySelector('#areaInput');
+        const areaHint = modal.querySelector('#areaHint');
+        
+        // 报告类型对应的提示信息
+        const typeHints = {
+          '市场趋势报告': '可留空，将分析全国及重点城市',
+          '城市分析报告': '建议填写具体区域，如：海淀区',
+          '城市对比报告': '可留空，将对比多个城市',
+          '投资价值报告': '建议填写具体区域，如：朝阳区'
+        };
+        
+        const typePlaceholders = {
+          '市场趋势报告': '可留空，将分析全国数据',
+          '城市分析报告': '例如：海淀区',
+          '城市对比报告': '可留空，将对比多个城市',
+          '投资价值报告': '例如：朝阳区'
+        };
+        
+        typeOptions.forEach(option => {
+          option.addEventListener('click', function() {
+            // 移除所有选中状态
+            typeOptions.forEach(opt => {
+              opt.style.borderColor = '#e5e7eb';
+              opt.style.background = 'white';
+            });
+            
+            // 设置当前选中状态
+            this.style.borderColor = '#3b82f6';
+            this.style.background = '#eff6ff';
+            
+            // 更新隐藏输入值
+            const selectedType = this.dataset.type;
+            if (hiddenInput) {
+              hiddenInput.value = selectedType;
+            }
+            
+            // 更新区域输入提示
+            if (areaInput && typePlaceholders[selectedType]) {
+              areaInput.placeholder = typePlaceholders[selectedType];
+            }
+            
+            // 更新提示文本
+            if (areaHint && typeHints[selectedType]) {
+              areaHint.textContent = typeHints[selectedType];
+            }
+          });
+          
+          // 悬停效果
+          option.addEventListener('mouseenter', function() {
+            if (this.style.borderColor !== 'rgb(59, 130, 246)') {
+              this.style.borderColor = '#cbd5e1';
+            }
+          });
+          
+          option.addEventListener('mouseleave', function() {
+            if (this.style.borderColor !== 'rgb(59, 130, 246)') {
+              this.style.borderColor = '#e5e7eb';
+            }
+          });
+        });
+        
+        // 默认选中第一个
+        if (typeOptions.length > 0 && hiddenInput) {
+          typeOptions[0].click();
+        }
+      }, 100);
     }
   }
 
@@ -280,59 +310,119 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(() => {
     const form = document.getElementById('generateReportForm');
     if (form) {
-      console.log('表单已找到，绑定提交事件');
       form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        console.log('表单提交事件触发');
       
-      const formData = new FormData(this);
-      const metrics = [];
-      formData.getAll('metrics').forEach(m => metrics.push(m));
-      
-      const districts = formData.get('districts') ? formData.get('districts').split(',').map(d => d.trim()) : [];
-      
-      const params = {
-        type: formData.get('type'),
-        city: formData.get('city'),
-        districts: districts,
-        date_range: {
-          start: formData.get('start_date') || '',
-          end: formData.get('end_date') || ''
-        },
-        metrics: metrics,
-        format: formData.get('format')
-      };
-      
-      const submitBtn = document.querySelector('#generateReportModal button[type="submit"]');
-      if (!submitBtn) {
-        console.error('找不到提交按钮');
-        return;
-      }
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<div class="btn-spinner"></div> 生成中...';
-      
-      try {
-        const result = await API.report.generate(params);
-        alert(`报告生成成功！报告ID: ${result.report_id || 'N/A'}`);
-        closeGenerateModal();
-        form.reset();
+        const formData = new FormData(this);
+        const area = formData.get('area');
+        const city = formData.get('city');
+        const report_type = formData.get('report_type');
         
-        // 刷新报告列表
-        setTimeout(() => {
-          loadReportList();
-          loadMyReports();
-        }, 1000);
+        // 验证：至少填写城市或区域之一
+        if (!area && !city) {
+          showToast('请至少填写城市或区域之一', 'warning');
+          return;
+        }
         
-      } catch (error) {
-        alert(error.message || '生成报告失败，请稍后重试');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i data-lucide="zap"></i> 生成报告';
+        // 验证：必须选择报告类型
+        if (!report_type) {
+          showToast('请选择报告类型', 'warning');
+          return;
+        }
+        
+        const params = {
+          area: area || '',
+          city: city || '',
+          report_type: report_type
+        };
+      
+        const submitBtn = document.querySelector('#generateReportModal button[type="submit"]');
+        if (!submitBtn) return;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> 正在生成...';
+        
+        // 创建进度提示
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'generation-progress';
+        progressDiv.style.cssText = 'margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px; font-size: 13px; color: #1e40af;';
+        progressDiv.innerHTML = '<i data-lucide="loader" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i> 正在初始化...';
+        form.appendChild(progressDiv);
         lucide.createIcons();
-      }
-    });
-    } else {
-      console.error('找不到表单元素 generateReportForm');
+      
+        try {
+          // 使用异步API
+          const response = await fetch('/api/reports/generate/ai/async', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(params)
+          });
+          
+          if (!response.ok) throw new Error('创建任务失败');
+          
+          const result = await response.json();
+          const taskId = result.data.task_id;
+          
+          // 轮询任务状态
+          const pollInterval = setInterval(async () => {
+            try {
+              const statusResponse = await fetch(`/api/reports/task/${taskId}`, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+              });
+              
+              if (!statusResponse.ok) {
+                clearInterval(pollInterval);
+                throw new Error('查询任务状态失败');
+              }
+              
+              const statusData = await statusResponse.json();
+              const task = statusData.data;
+              
+              // 更新进度
+              if (task.status === 'pending') {
+                progressDiv.innerHTML = `<i data-lucide="loader" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i> 任务排队中...`;
+              } else if (task.status === 'processing') {
+                progressDiv.innerHTML = `<i data-lucide="loader" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i> ${task.message} (${task.progress}%)`;
+              } else if (task.status === 'completed') {
+                clearInterval(pollInterval);
+                progressDiv.innerHTML = '<i data-lucide="check-circle" style="width: 14px; height: 14px; color: #10b981;"></i> 生成完成！';
+                
+                showToast('报告生成成功！', 'success');
+                closeGenerateModal();
+                form.reset();
+                progressDiv.remove();
+                
+                // 刷新报告列表
+                setTimeout(() => {
+                  loadReportList();
+                  loadMyReports();
+                }, 500);
+              } else if (task.status === 'failed') {
+                clearInterval(pollInterval);
+                throw new Error(task.error || '报告生成失败');
+              }
+              
+              lucide.createIcons();
+            } catch (e) {
+              clearInterval(pollInterval);
+              throw e;
+            }
+          }, 2000); // 每2秒轮询一次
+          
+        } catch (error) {
+          showToast(error.message || '生成报告失败', 'error');
+          if (progressDiv) progressDiv.remove();
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i data-lucide="zap"></i> 生成报告';
+          lucide.createIcons();
+        }
+      });
     }
   }, 100);
   
@@ -349,32 +439,64 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     try {
-      const data = await API.report.getMyReports({ page: 1, page_size: 5 });
-      const reports = data.reports || data.list || [];
+      // 同时获取任务和报告
+      const [tasksResponse, reportsData] = await Promise.all([
+        fetch('/api/reports/tasks/user', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        }).then(r => r.json()).catch(() => ({ data: { tasks: [] } })),
+        API.report.getMyReports({ page: 1, page_size: 5 })
+      ]);
       
-      if (!reports.length) {
+      const tasks = tasksResponse.data?.tasks || [];
+      const reports = reportsData.reports || reportsData.list || [];
+      
+      // 筛选未完成的任务
+      const activeTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'failed');
+      
+      if (!activeTasks.length && !reports.length) {
         container.innerHTML = '<p class="empty-text">暂无生成的报告</p>';
         return;
       }
       
       let html = '<ul class="my-report-list">';
-      reports.forEach(report => {
-        const statusClass = report.status === 'completed' ? 'completed' : 'generating';
-        const statusText = report.status === 'completed' ? '已完成' : '生成中...';
+      
+      // 先显示正在生成的任务
+      activeTasks.forEach(task => {
+        const params = task.params || {};
+        const title = `${params.area || params.city || '未知区域'}${params.report_type || '报告'}`;
+        const statusText = task.status === 'pending' ? '排队中' : `生成中 (${task.progress}%)`;
+        const statusClass = task.status === 'pending' ? 'pending' : 'generating';
         
         html += `
-          <li class="my-report-item ${statusClass}" data-report='${JSON.stringify(report).replace(/'/g, "&#39;")}'>
+          <li class="my-report-item ${statusClass}" data-task-id="${task.task_id}">
+            <div class="my-report-info">
+              <span class="my-report-title">${title}</span>
+              <span class="my-report-date">${new Date(task.created_at).toLocaleDateString('zh-CN')}</span>
+            </div>
+            <span class="my-report-status ${statusClass}">
+              <i data-lucide="loader" style="width: 12px; height: 12px; animation: spin 1s linear infinite;"></i>
+              ${statusText}
+            </span>
+          </li>
+        `;
+      });
+      
+      // 再显示已完成的报告
+      reports.slice(0, 5 - activeTasks.length).forEach(report => {
+        html += `
+          <li class="my-report-item completed" data-report='${JSON.stringify(report).replace(/'/g, "&#39;")}'>
             <div class="my-report-info">
               <span class="my-report-title">${report.title}</span>
               <span class="my-report-date">${report.created_at ? new Date(report.created_at).toLocaleDateString('zh-CN') : '-'}</span>
             </div>
-            <span class="my-report-status ${statusClass}">${statusText}</span>
+            <span class="my-report-status completed">已完成</span>
           </li>
         `;
       });
       html += '</ul>';
       
       container.innerHTML = html;
+      lucide.createIcons();
       
       // 绑定点击事件查看报告详情
       container.querySelectorAll('.my-report-item.completed').forEach(item => {
@@ -388,6 +510,11 @@ document.addEventListener('DOMContentLoaded', async function() {
           }
         });
       });
+      
+      // 如果有正在生成的任务，启动轮询
+      if (activeTasks.length > 0) {
+        setTimeout(loadMyReports, 3000); // 3秒后刷新
+      }
       
     } catch (error) {
       console.error('加载我的报告失败:', error);
@@ -488,7 +615,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   
   // ========== 初始化加载 ==========
-  loadReportTypes();
   loadStaticReports();
   loadReportList();
   loadMyReports();
@@ -548,6 +674,9 @@ if (!document.getElementById('toast-animations')) {
             from { transform: translateX(0); opacity: 1; }
             to { transform: translateX(100%); opacity: 0; }
         }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         .btn-spinner {
             display: inline-block;
             width: 14px;
@@ -557,9 +686,6 @@ if (!document.getElementById('toast-animations')) {
             border-radius: 50%;
             animation: spin 0.6s linear infinite;
             vertical-align: middle;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
         }
         .save-btn.favorited,
         .favorite-report-btn.favorited {

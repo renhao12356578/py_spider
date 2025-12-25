@@ -156,6 +156,28 @@
             </div>
           </div>
           <div class="map-container" id="chinaMap"></div>
+          <!-- 省份悬停弹窗 -->
+          <div class="province-hover-popup" id="provincePopup">
+            <div class="popup-header">
+              <div class="popup-province-name" id="popupProvinceName">加载中...</div>
+            </div>
+            <div class="popup-stats" id="popupStats">
+              <div class="popup-stat-item">
+                <span class="popup-stat-label">均价</span>
+                <span class="popup-stat-value" id="popupAvgPrice">--</span>
+              </div>
+              <div class="popup-stat-item">
+                <span class="popup-stat-label">挂牌数</span>
+                <span class="popup-stat-value" id="popupListingCount">--</span>
+              </div>
+              <div class="popup-stat-item">
+                <span class="popup-stat-label">城市数</span>
+                <span class="popup-stat-value" id="popupCityCount">--</span>
+              </div>
+            </div>
+            <div class="popup-cities" id="popupCities"></div>
+            <div class="popup-chart-container" id="popupChart"></div>
+          </div>
         </div>
         
         <!-- 右侧边栏 -->
@@ -194,13 +216,13 @@
                 </div>
                 <span class="quick-label">北京分析</span>
               </a>
-              <a href="#" class="quick-item">
+              <a href="report.html" class="quick-item">
                 <div class="quick-icon">
                   <i data-lucide="bar-chart-2"></i>
                 </div>
                 <span class="quick-label">趋势报告</span>
               </a>
-              <a href="#" class="quick-item">
+              <a href="beijing.html" class="quick-item">
                 <div class="quick-icon">
                   <i data-lucide="brain"></i>
                 </div>
