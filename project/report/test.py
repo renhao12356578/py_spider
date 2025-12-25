@@ -349,8 +349,7 @@ def main():
     print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # 确保存储目录存在
-    os.makedirs('reports_storage/texts', exist_ok=True)
-    os.makedirs('reports_storage/images', exist_ok=True)
+
     
     # 测试1: 创建普通报告（带图片生成）
     results = test_create_reports()
