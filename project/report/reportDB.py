@@ -11,7 +11,7 @@ from wsgiref.handlers import format_date_time
 from time import mktime
 from urllib.parse import urlencode
 from typing import Dict, List, Optional, Tuple
-from ai_service import LLMAIService
+from report.ai_service import LLMAIService
 
 # 使用系统连接池
 from utils.database import get_db_connection

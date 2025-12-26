@@ -145,6 +145,104 @@ const MockData = {
         { year: 2024, month: 11, avg_price: 16560 },
         { year: 2024, month: 12, avg_price: 16580 }
       ]
+    },
+    
+    // 城市分级气泡图
+    clustering: {
+      cities: [
+        { city_name: '北京', city_avg_price: 65000, city_avg_total_price: 520, listing_count: 52000, price_rent_ratio: 650, city_tier: '一线城市' },
+        { city_name: '上海', city_avg_price: 62000, city_avg_total_price: 480, listing_count: 48000, price_rent_ratio: 620, city_tier: '一线城市' },
+        { city_name: '深圳', city_avg_price: 58000, city_avg_total_price: 450, listing_count: 35000, price_rent_ratio: 580, city_tier: '一线城市' },
+        { city_name: '广州', city_avg_price: 38000, city_avg_total_price: 320, listing_count: 42000, price_rent_ratio: 480, city_tier: '一线城市' },
+        { city_name: '杭州', city_avg_price: 35000, city_avg_total_price: 280, listing_count: 28000, price_rent_ratio: 450, city_tier: '二线城市' },
+        { city_name: '南京', city_avg_price: 32000, city_avg_total_price: 260, listing_count: 25000, price_rent_ratio: 420, city_tier: '二线城市' },
+        { city_name: '成都', city_avg_price: 18000, city_avg_total_price: 180, listing_count: 45000, price_rent_ratio: 380, city_tier: '二线城市' },
+        { city_name: '武汉', city_avg_price: 18500, city_avg_total_price: 160, listing_count: 32000, price_rent_ratio: 360, city_tier: '二线城市' },
+        { city_name: '西安', city_avg_price: 15000, city_avg_total_price: 140, listing_count: 28000, price_rent_ratio: 340, city_tier: '二线城市' },
+        { city_name: '重庆', city_avg_price: 12000, city_avg_total_price: 120, listing_count: 38000, price_rent_ratio: 320, city_tier: '三线城市' },
+        { city_name: '长沙', city_avg_price: 11000, city_avg_total_price: 110, listing_count: 30000, price_rent_ratio: 300, city_tier: '三线城市' },
+        { city_name: '郑州', city_avg_price: 13000, city_avg_total_price: 130, listing_count: 35000, price_rent_ratio: 310, city_tier: '三线城市' },
+        { city_name: '鹤岗', city_avg_price: 2100, city_avg_total_price: 25, listing_count: 5000, price_rent_ratio: 150, city_tier: '四线城市' }
+      ]
+    },
+    
+    // 区县涨跌比热力图
+    heatmap: {
+      heatmap: [
+        { city_name: '北京', district_name: '海淀区', district_avg_price: 85000, district_ratio: 2.5 },
+        { city_name: '北京', district_name: '朝阳区', district_avg_price: 75000, district_ratio: 1.8 },
+        { city_name: '北京', district_name: '西城区', district_avg_price: 95000, district_ratio: -0.5 },
+        { city_name: '上海', district_name: '浦东新区', district_avg_price: 68000, district_ratio: 1.2 },
+        { city_name: '上海', district_name: '徐汇区', district_avg_price: 72000, district_ratio: -1.0 },
+        { city_name: '深圳', district_name: '南山区', district_avg_price: 82000, district_ratio: 3.2 },
+        { city_name: '深圳', district_name: '福田区', district_avg_price: 78000, district_ratio: 2.1 },
+        { city_name: '广州', district_name: '天河区', district_avg_price: 52000, district_ratio: 1.5 },
+        { city_name: '杭州', district_name: '西湖区', district_avg_price: 48000, district_ratio: 2.8 },
+        { city_name: '成都', district_name: '高新区', district_avg_price: 25000, district_ratio: 3.5 }
+      ]
+    },
+    
+    // 挂牌量TOP排行
+    listingRanking: {
+      ranking: [
+        { rank: 1, city_name: '北京', listing_count: 52000, city_avg_price: 65000 },
+        { rank: 2, city_name: '上海', listing_count: 48000, city_avg_price: 62000 },
+        { rank: 3, city_name: '成都', listing_count: 45000, city_avg_price: 18000 },
+        { rank: 4, city_name: '广州', listing_count: 42000, city_avg_price: 38000 },
+        { rank: 5, city_name: '重庆', listing_count: 38000, city_avg_price: 12000 },
+        { rank: 6, city_name: '深圳', listing_count: 35000, city_avg_price: 58000 },
+        { rank: 7, city_name: '郑州', listing_count: 35000, city_avg_price: 13000 },
+        { rank: 8, city_name: '武汉', listing_count: 32000, city_avg_price: 18500 },
+        { rank: 9, city_name: '长沙', listing_count: 30000, city_avg_price: 11000 },
+        { rank: 10, city_name: '西安', listing_count: 28000, city_avg_price: 15000 }
+      ]
+    },
+    
+    // 区县价格排行
+    districtRanking: {
+      ranking: [
+        { rank: 1, city_name: '北京', district_name: '西城区', district_avg_price: 95000, district_ratio: -0.5 },
+        { rank: 2, city_name: '北京', district_name: '海淀区', district_avg_price: 85000, district_ratio: 2.5 },
+        { rank: 3, city_name: '深圳', district_name: '南山区', district_avg_price: 82000, district_ratio: 3.2 },
+        { rank: 4, city_name: '深圳', district_name: '福田区', district_avg_price: 78000, district_ratio: 2.1 },
+        { rank: 5, city_name: '北京', district_name: '朝阳区', district_avg_price: 75000, district_ratio: 1.8 },
+        { rank: 6, city_name: '上海', district_name: '徐汇区', district_avg_price: 72000, district_ratio: -1.0 },
+        { rank: 7, city_name: '上海', district_name: '浦东新区', district_avg_price: 68000, district_ratio: 1.2 },
+        { rank: 8, city_name: '广州', district_name: '天河区', district_avg_price: 52000, district_ratio: 1.5 },
+        { rank: 9, city_name: '杭州', district_name: '西湖区', district_avg_price: 48000, district_ratio: 2.8 },
+        { rank: 10, city_name: '成都', district_name: '高新区', district_avg_price: 25000, district_ratio: 3.5 }
+      ]
+    },
+    
+    // 同城区县对比
+    cityDistricts: {
+      city_name: '北京',
+      districts: [
+        { district_name: '西城区', district_avg_price: 95000, district_ratio: -0.5 },
+        { district_name: '海淀区', district_avg_price: 85000, district_ratio: 2.5 },
+        { district_name: '朝阳区', district_avg_price: 75000, district_ratio: 1.8 },
+        { district_name: '东城区', district_avg_price: 88000, district_ratio: 0.8 },
+        { district_name: '丰台区', district_avg_price: 58000, district_ratio: 1.2 },
+        { district_name: '石景山区', district_avg_price: 52000, district_ratio: -0.3 },
+        { district_name: '通州区', district_avg_price: 48000, district_ratio: 3.5 },
+        { district_name: '昌平区', district_avg_price: 42000, district_ratio: 2.1 }
+      ]
+    },
+    
+    // 区县涨跌榜
+    districtChangeRanking: {
+      ranking: [
+        { rank: 1, city_name: '成都', district_name: '高新区', district_avg_price: 25000, district_ratio: 3.5 },
+        { rank: 2, city_name: '北京', district_name: '通州区', district_avg_price: 48000, district_ratio: 3.2 },
+        { rank: 3, city_name: '深圳', district_name: '南山区', district_avg_price: 82000, district_ratio: 3.2 },
+        { rank: 4, city_name: '杭州', district_name: '西湖区', district_avg_price: 48000, district_ratio: 2.8 },
+        { rank: 5, city_name: '北京', district_name: '海淀区', district_avg_price: 85000, district_ratio: 2.5 },
+        { rank: 6, city_name: '深圳', district_name: '福田区', district_avg_price: 78000, district_ratio: 2.1 },
+        { rank: 7, city_name: '北京', district_name: '朝阳区', district_avg_price: 75000, district_ratio: 1.8 },
+        { rank: 8, city_name: '广州', district_name: '天河区', district_avg_price: 52000, district_ratio: 1.5 },
+        { rank: 9, city_name: '上海', district_name: '浦东新区', district_avg_price: 68000, district_ratio: 1.2 },
+        { rank: 10, city_name: '北京', district_name: '东城区', district_avg_price: 88000, district_ratio: 0.8 }
+      ]
     }
   },
   

@@ -1210,6 +1210,411 @@ def get_boxplot_data(district: str) -> str:
             "msg": error_msg
         }, ensure_ascii=False)
 
+def get_city_clustering() -> str:
+    """
+    方案C：城市分级气泡图数据
+    按均价和挂牌量将城市分为一二三四线城市
+    返回：城市名、均价、总价、挂牌量、租售比、城市等级
+    """
+    connection = get_db_connection()
+    if not connection:
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": "数据库连接失败"
+        }, ensure_ascii=False)
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+
+        query = """
+        SELECT 
+            city_name,
+            city_avg_price,
+            city_avg_total_price,
+            listing_count,
+            price_rent_ratio,
+            city_tier
+        FROM (
+            SELECT DISTINCT
+                city_name,
+                city_avg_price,
+                city_avg_total_price,
+                listing_count,
+                price_rent_ratio,
+                CASE
+                    WHEN city_avg_price >= 30000 THEN '一线城市'
+                    WHEN city_avg_price >= 15000 THEN '二线城市'
+                    WHEN city_avg_price >= 8000 THEN '三线城市'
+                    ELSE '四线城市'
+                END as city_tier
+            FROM current_price
+            WHERE city_avg_price IS NOT NULL AND listing_count IS NOT NULL
+        ) AS city_data
+        ORDER BY city_avg_price DESC
+        """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        cities = []
+        for item in results:
+            cities.append({
+                "city_name": item['city_name'],
+                "city_avg_price": int(item['city_avg_price']) if item['city_avg_price'] else 0,
+                "city_avg_total_price": int(item['city_avg_total_price']) if item['city_avg_total_price'] else 0,
+                "listing_count": int(item['listing_count']) if item['listing_count'] else 0,
+                "price_rent_ratio": int(item['price_rent_ratio']) if item['price_rent_ratio'] else 0,
+                "city_tier": item['city_tier']
+            })
+
+        response = {
+            "code": 200,
+            "data": {"cities": cities}
+        }
+
+        cursor.close()
+        connection.close()
+        return json.dumps(response, ensure_ascii=False)
+
+    except Exception as e:
+        print(f"城市分级查询失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": f"查询失败: {str(e)}"
+        }, ensure_ascii=False)
+
+
+def get_district_change_heatmap(city: Optional[str] = None) -> str:
+    """
+    方案C：区县涨跌比热力图数据
+    展示各城市区县的涨跌情况
+    :param city: 指定城市（可选，为空则返回全国数据）
+    """
+    connection = get_db_connection()
+    if not connection:
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": "数据库连接失败"
+        }, ensure_ascii=False)
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+
+        where_conditions = ["district_ratio IS NOT NULL", "district_avg_price > 0"]
+        if city and city.strip():
+            where_conditions.append(f"city_name LIKE '%{city.strip()}%'")
+        where_clause = "WHERE " + " AND ".join(where_conditions)
+
+        query = f"""
+        SELECT
+            city_name,
+            district_name,
+            district_avg_price,
+            district_ratio
+        FROM current_price
+        {where_clause}
+        ORDER BY ABS(district_ratio) DESC
+        LIMIT 300
+        """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        heatmap_data = []
+        for item in results:
+            heatmap_data.append({
+                "city_name": item['city_name'],
+                "district_name": item['district_name'],
+                "district_avg_price": int(item['district_avg_price']) if item['district_avg_price'] else 0,
+                "district_ratio": round(float(item['district_ratio']), 1) if item['district_ratio'] else 0.0
+            })
+
+        response = {
+            "code": 200,
+            "data": {"heatmap": heatmap_data}
+        }
+
+        cursor.close()
+        connection.close()
+        return json.dumps(response, ensure_ascii=False)
+
+    except Exception as e:
+        print(f"涨跌比热力图查询失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": f"查询失败: {str(e)}"
+        }, ensure_ascii=False)
+
+
+def get_listing_top_ranking(limit: int = 20) -> str:
+    """
+    方案C：挂牌量TOP排行
+    展示房源供应最多的城市
+    :param limit: 返回数量（默认20）
+    """
+    connection = get_db_connection()
+    if not connection:
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": "数据库连接失败"
+        }, ensure_ascii=False)
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        limit = max(1, min(limit, 50))
+
+        query = f"""
+        SELECT 
+            city_name,
+            MAX(listing_count) as listing_count,
+            MAX(city_avg_price) as city_avg_price
+        FROM current_price
+        WHERE listing_count IS NOT NULL AND listing_count > 0
+        GROUP BY city_name
+        ORDER BY listing_count DESC
+        LIMIT {limit}
+        """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        ranking = []
+        for idx, item in enumerate(results, 1):
+            ranking.append({
+                "rank": idx,
+                "city_name": item['city_name'],
+                "listing_count": int(item['listing_count']) if item['listing_count'] else 0,
+                "city_avg_price": int(item['city_avg_price']) if item['city_avg_price'] else 0
+            })
+
+        response = {
+            "code": 200,
+            "data": {"ranking": ranking}
+        }
+
+        cursor.close()
+        connection.close()
+        return json.dumps(response, ensure_ascii=False)
+
+    except Exception as e:
+        print(f"挂牌量排行查询失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": f"查询失败: {str(e)}"
+        }, ensure_ascii=False)
+
+
+def get_district_price_ranking(limit: int = 50, city: Optional[str] = None) -> str:
+    """
+    方案D：区县价格排行
+    全国所有区县的房价排名
+    :param limit: 返回数量（默认50）
+    :param city: 指定城市（可选）
+    """
+    connection = get_db_connection()
+    if not connection:
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": "数据库连接失败"
+        }, ensure_ascii=False)
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        limit = max(1, min(limit, 100))
+
+        where_conditions = ["district_avg_price IS NOT NULL", "district_avg_price > 0"]
+        if city and city.strip():
+            where_conditions.append(f"city_name LIKE '%{city.strip()}%'")
+        where_clause = "WHERE " + " AND ".join(where_conditions)
+
+        query = f"""
+        SELECT
+            city_name,
+            district_name,
+            district_avg_price,
+            district_ratio
+        FROM current_price
+        {where_clause}
+        ORDER BY district_avg_price DESC
+        LIMIT {limit}
+        """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        ranking = []
+        for idx, item in enumerate(results, 1):
+            ranking.append({
+                "rank": idx,
+                "city_name": item['city_name'],
+                "district_name": item['district_name'],
+                "district_avg_price": int(item['district_avg_price']) if item['district_avg_price'] else 0,
+                "district_ratio": round(float(item['district_ratio']), 1) if item['district_ratio'] else 0.0
+            })
+
+        response = {
+            "code": 200,
+            "data": {"ranking": ranking}
+        }
+
+        cursor.close()
+        connection.close()
+        return json.dumps(response, ensure_ascii=False)
+
+    except Exception as e:
+        print(f"区县价格排行查询失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": f"查询失败: {str(e)}"
+        }, ensure_ascii=False)
+
+
+def get_city_districts_comparison(city: str) -> str:
+    """
+    方案D：同城区县对比
+    选定城市后，展示其各区县的价格差异
+    :param city: 城市名称（必填）
+    """
+    if not city or not city.strip():
+        return json.dumps({
+            "code": 400,
+            "data": {},
+            "message": "city参数为必填项"
+        }, ensure_ascii=False)
+
+    connection = get_db_connection()
+    if not connection:
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": "数据库连接失败"
+        }, ensure_ascii=False)
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+
+        query = f"""
+        SELECT
+            district_name,
+            district_avg_price,
+            district_ratio
+        FROM current_price
+        WHERE city_name LIKE '%{city.strip()}%'
+            AND district_avg_price IS NOT NULL
+            AND district_avg_price > 0
+        ORDER BY district_avg_price DESC
+        """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        if not results:
+            return json.dumps({
+                "code": 404,
+                "data": {},
+                "message": f"未找到城市 {city} 的区县数据"
+            }, ensure_ascii=False)
+
+        districts = []
+        for item in results:
+            districts.append({
+                "district_name": item['district_name'],
+                "district_avg_price": int(item['district_avg_price']) if item['district_avg_price'] else 0,
+                "district_ratio": round(float(item['district_ratio']), 1) if item['district_ratio'] else 0.0
+            })
+
+        response = {
+            "code": 200,
+            "data": {
+                "city_name": city.strip(),
+                "districts": districts
+            }
+        }
+
+        cursor.close()
+        connection.close()
+        return json.dumps(response, ensure_ascii=False)
+
+    except Exception as e:
+        print(f"同城区县对比查询失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": f"查询失败: {str(e)}"
+        }, ensure_ascii=False)
+
+
+def get_district_change_ranking(limit: int = 30, order: str = "desc") -> str:
+    """
+    方案D：区县涨跌榜
+    按district_ratio排序展示涨跌幅最大的区县
+    :param limit: 返回数量（默认30）
+    :param order: 排序方式 (desc/asc，默认desc)
+    """
+    connection = get_db_connection()
+    if not connection:
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": "数据库连接失败"
+        }, ensure_ascii=False)
+
+    try:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        limit = max(1, min(limit, 100))
+        order = order.upper() if order.lower() in ['desc', 'asc'] else 'DESC'
+
+        query = f"""
+        SELECT
+            city_name,
+            district_name,
+            district_avg_price,
+            district_ratio
+        FROM current_price
+        WHERE district_ratio IS NOT NULL
+        ORDER BY district_ratio {order}
+        LIMIT {limit}
+        """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        ranking = []
+        for idx, item in enumerate(results, 1):
+            ranking.append({
+                "rank": idx,
+                "city_name": item['city_name'],
+                "district_name": item['district_name'],
+                "district_avg_price": int(item['district_avg_price']) if item['district_avg_price'] else 0,
+                "district_ratio": round(float(item['district_ratio']), 1) if item['district_ratio'] else 0.0
+            })
+
+        response = {
+            "code": 200,
+            "data": {"ranking": ranking}
+        }
+
+        cursor.close()
+        connection.close()
+        return json.dumps(response, ensure_ascii=False)
+
+    except Exception as e:
+        print(f"区县涨跌榜查询失败: {e}")
+        return json.dumps({
+            "code": 500,
+            "data": {},
+            "message": f"查询失败: {str(e)}"
+        }, ensure_ascii=False)
+
+
 def query_houses_list(
         district: Optional[str] = None,
         layout: Optional[str] = None,

@@ -57,3 +57,52 @@ def price_trend():
     year = request.args.get('year', type=int)
     result = ds.get_price_trend(city, year)
     return jsonify(json.loads(result))
+
+
+@national_bp.route('/clustering', methods=['GET'])
+def city_clustering():
+    """方案C：城市分级气泡图数据"""
+    result = ds.get_city_clustering()
+    return jsonify(json.loads(result))
+
+
+@national_bp.route('/heatmap', methods=['GET'])
+def district_change_heatmap():
+    """方案C：区县涨跌比热力图"""
+    city = request.args.get('city', '')
+    result = ds.get_district_change_heatmap(city)
+    return jsonify(json.loads(result))
+
+
+@national_bp.route('/listing-ranking', methods=['GET'])
+def listing_top_ranking():
+    """方案C：挂牌量TOP排行"""
+    limit = request.args.get('limit', 20, type=int)
+    result = ds.get_listing_top_ranking(limit)
+    return jsonify(json.loads(result))
+
+
+@national_bp.route('/district-ranking', methods=['GET'])
+def district_price_ranking():
+    """方案D：区县价格排行"""
+    limit = request.args.get('limit', 50, type=int)
+    city = request.args.get('city', '')
+    result = ds.get_district_price_ranking(limit, city)
+    return jsonify(json.loads(result))
+
+
+@national_bp.route('/city-districts', methods=['GET'])
+def city_districts_comparison():
+    """方案D：同城区县对比"""
+    city = request.args.get('city', '')
+    result = ds.get_city_districts_comparison(city)
+    return jsonify(json.loads(result))
+
+
+@national_bp.route('/district-change-ranking', methods=['GET'])
+def district_change_ranking():
+    """方案D：区县涨跌榜"""
+    limit = request.args.get('limit', 30, type=int)
+    order = request.args.get('order', 'desc')
+    result = ds.get_district_change_ranking(limit, order)
+    return jsonify(json.loads(result))

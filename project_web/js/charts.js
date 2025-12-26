@@ -589,6 +589,306 @@ const Charts = {
         }
       }]
     };
+  },
+  
+  /**
+   * 城市分级气泡图配置
+   */
+  getCityClusteringOption(cities) {
+    const tierColors = {
+      '一线城市': '#ef4444',
+      '二线城市': '#f59e0b',
+      '三线城市': '#10b981',
+      '四线城市': '#06b6d4'
+    };
+    
+    const seriesData = {};
+    cities.forEach(city => {
+      const tier = city.city_tier;
+      if (!seriesData[tier]) {
+        seriesData[tier] = [];
+      }
+      seriesData[tier].push({
+        name: city.city_name,
+        value: [city.city_avg_price, city.listing_count, city.city_avg_total_price]
+      });
+    });
+    
+    const series = Object.entries(seriesData).map(([tier, data]) => ({
+      name: tier,
+      type: 'scatter',
+      symbolSize: (val) => Math.sqrt(val[1]) / 10,
+      data: data,
+      itemStyle: {
+        color: tierColors[tier]
+      }
+    }));
+    
+    return {
+      title: {
+        text: '城市分级分布',
+        left: 'center',
+        textStyle: { color: this.colors.text, fontSize: 16, fontWeight: 600 }
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: (params) => {
+          const data = params.value;
+          return `${params.seriesName}<br/>${params.name}<br/>均价: ${this.formatPrice(data[0])}<br/>挂牌量: ${data[1]}<br/>总价: ${data[2]}万`;
+        }
+      },
+      legend: {
+        data: ['一线城市', '二线城市', '三线城市', '四线城市'],
+        bottom: 10
+      },
+      grid: { left: '10%', right: '10%', top: '15%', bottom: '15%', containLabel: true },
+      xAxis: {
+        type: 'value',
+        name: '城市均价 (元/㎡)',
+        axisLabel: { formatter: v => (v/10000).toFixed(0) + '万' }
+      },
+      yAxis: {
+        type: 'value',
+        name: '挂牌量',
+        axisLabel: { formatter: v => (v/10000).toFixed(0) + '万' }
+      },
+      series: series
+    };
+  },
+  
+  /**
+   * 区县涨跌比热力图配置
+   */
+  getDistrictHeatmapOption(heatmap) {
+    const data = heatmap.map(item => ({
+      name: `${item.city_name}-${item.district_name}`,
+      value: [item.district_avg_price, item.district_ratio]
+    }));
+    
+    return {
+      title: {
+        text: '区县涨跌热力分布',
+        left: 'center',
+        textStyle: { color: this.colors.text, fontSize: 16, fontWeight: 600 }
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: (params) => {
+          return `${params.name}<br/>均价: ${this.formatPrice(params.value[0])}<br/>涨跌比: ${params.value[1]}%`;
+        }
+      },
+      grid: { left: '10%', right: '10%', top: '15%', bottom: '10%', containLabel: true },
+      xAxis: {
+        type: 'value',
+        name: '区县均价 (元/㎡)',
+        axisLabel: { formatter: v => (v/10000).toFixed(0) + '万' }
+      },
+      yAxis: {
+        type: 'value',
+        name: '涨跌比 (%)'
+      },
+      visualMap: {
+        min: -10,
+        max: 10,
+        dimension: 1,
+        orient: 'vertical',
+        right: 10,
+        top: 'center',
+        text: ['涨', '跌'],
+        inRange: {
+          color: ['#10b981', '#fbbf24', '#ef4444']
+        }
+      },
+      series: [{
+        type: 'scatter',
+        symbolSize: 8,
+        data: data
+      }]
+    };
+  },
+  
+  /**
+   * 挂牌量TOP排行配置
+   */
+  getListingRankingOption(ranking) {
+    const cities = ranking.map(item => item.city_name);
+    const listings = ranking.map(item => item.listing_count);
+    
+    return {
+      title: {
+        text: '城市挂牌量排行',
+        left: 'center',
+        textStyle: { color: this.colors.text, fontSize: 16, fontWeight: 600 }
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' }
+      },
+      grid: { left: '3%', right: '4%', top: '15%', bottom: '3%', containLabel: true },
+      xAxis: {
+        type: 'value',
+        axisLabel: { formatter: v => (v/10000).toFixed(0) + '万' }
+      },
+      yAxis: {
+        type: 'category',
+        data: cities,
+        inverse: true
+      },
+      series: [{
+        type: 'bar',
+        data: listings,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#667eea' },
+            { offset: 1, color: '#764ba2' }
+          ])
+        }
+      }]
+    };
+  },
+  
+  /**
+   * 区县价格排行配置
+   */
+  getDistrictPriceRankingOption(ranking) {
+    const districts = ranking.map(item => `${item.city_name}-${item.district_name}`);
+    const prices = ranking.map(item => item.district_avg_price);
+    
+    return {
+      title: {
+        text: '区县房价排行',
+        left: 'center',
+        textStyle: { color: this.colors.text, fontSize: 16, fontWeight: 600 }
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params) => {
+          const p = params[0];
+          return `${p.name}<br/>均价: ${this.formatPrice(p.value)}`;
+        }
+      },
+      grid: { left: '3%', right: '4%', top: '15%', bottom: '3%', containLabel: true },
+      xAxis: {
+        type: 'value',
+        axisLabel: { formatter: v => (v/10000).toFixed(0) + '万' }
+      },
+      yAxis: {
+        type: 'category',
+        data: districts,
+        inverse: true,
+        axisLabel: { fontSize: 10 }
+      },
+      series: [{
+        type: 'bar',
+        data: prices,
+        itemStyle: { color: this.colors.primary }
+      }]
+    };
+  },
+  
+  /**
+   * 同城区县对比配置
+   */
+  getCityDistrictsOption(districts, cityName) {
+    const names = districts.map(d => d.district_name);
+    const prices = districts.map(d => d.district_avg_price);
+    const ratios = districts.map(d => d.district_ratio);
+    
+    return {
+      title: {
+        text: `${cityName} 区县对比`,
+        left: 'center',
+        textStyle: { color: this.colors.text, fontSize: 16, fontWeight: 600 }
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'cross' }
+      },
+      legend: {
+        data: ['区县均价', '涨跌比'],
+        bottom: 10
+      },
+      grid: { left: '3%', right: '4%', top: '15%', bottom: '15%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: names,
+        axisLabel: { rotate: 45, fontSize: 10 }
+      },
+      yAxis: [
+        {
+          type: 'value',
+          name: '均价 (元/㎡)',
+          axisLabel: { formatter: v => (v/10000).toFixed(0) + '万' }
+        },
+        {
+          type: 'value',
+          name: '涨跌比 (%)'
+        }
+      ],
+      series: [
+        {
+          name: '区县均价',
+          type: 'bar',
+          data: prices,
+          itemStyle: { color: this.colors.primary }
+        },
+        {
+          name: '涨跌比',
+          type: 'line',
+          yAxisIndex: 1,
+          data: ratios,
+          itemStyle: { color: this.colors.warning }
+        }
+      ]
+    };
+  },
+  
+  /**
+   * 区县涨跌榜配置
+   */
+  getDistrictChangeRankingOption(ranking, order) {
+    const districts = ranking.map(item => `${item.city_name}-${item.district_name}`);
+    const ratios = ranking.map(item => item.district_ratio);
+    
+    return {
+      title: {
+        text: order === 'desc' ? '区县涨幅榜' : '区县跌幅榜',
+        left: 'center',
+        textStyle: { color: this.colors.text, fontSize: 16, fontWeight: 600 }
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params) => {
+          const p = params[0];
+          return `${p.name}<br/>涨跌比: ${p.value}%`;
+        }
+      },
+      grid: { left: '3%', right: '4%', top: '15%', bottom: '3%', containLabel: true },
+      xAxis: {
+        type: 'value',
+        axisLabel: { formatter: v => v + '%' }
+      },
+      yAxis: {
+        type: 'category',
+        data: districts,
+        inverse: true,
+        axisLabel: { fontSize: 10 }
+      },
+      series: [{
+        type: 'bar',
+        data: ratios,
+        itemStyle: {
+          color: (params) => params.value > 0 ? this.colors.danger : this.colors.success
+        }
+      }]
+    };
+  },
+  
+  formatPrice(price) {
+    if (!price) return '0';
+    return (price / 10000).toFixed(2) + '万';
   }
 };
 
