@@ -378,25 +378,96 @@ class AIService:
 
         return min(100, score)
 
+    import random
+
+    import random
+
     def _generate_recommendation_reason(self, house: Dict) -> str:
         """生成推荐理由"""
         reasons = []
 
+        # 学区相关
         region = house.get('region', '')
-        if any(area in region for area in ['海淀', '西城', '东城']):
-            reasons.append("优质学区")
-
+        if region and any(area in region for area in ['海淀', '西城', '东城']):
+            school_reasons = ["优质学区", "教育资源丰富", "名校云集"]
+            reasons.append(random.choice(school_reasons))
+        
+        # 价格相关
         total_price = house.get('total_price', 0)
-        if total_price < 500:
-            reasons.append("价格适中")
-        elif total_price >= 1000:
-            reasons.append("高端住宅")
+        if isinstance(total_price, (int, float)):
+            if total_price < 300:
+                reasons.append(random.choice(["超值低价", "入门首选", "价格亲民"]))
+            elif total_price < 500:
+                reasons.append(random.choice(["价格适中", "性价比优", "预算友好"]))
+            elif total_price < 800:
+                reasons.append(random.choice(["品质之选", "舒适生活", "居住升级"]))
+            elif total_price >= 1000:
+                reasons.append(random.choice(["高端住宅", "奢华品质", "尊贵生活"]))
 
+        # 户型相关
         layout = house.get('layout', '')
-        if '3室' in layout or '三室' in layout:
-            reasons.append("户型实用")
+        if isinstance(layout, str):
+            if '1室' in layout or '一室' in layout:
+                reasons.append(random.choice(["温馨小居", "单身公寓", "投资优选"]))
+            elif '2室' in layout or '二室' in layout:
+                reasons.append(random.choice(["两居精品", "小家温馨", "刚需首选"]))
+            elif '3室' in layout or '三室' in layout:
+                reasons.append(random.choice(["户型实用", "三居舒适", "家庭理想"]))
+            elif '4室' in layout or '四室' in layout or '5室' in layout or '五室' in layout:
+                reasons.append(random.choice(["空间宽敞", "大户人家", "多居室豪宅"]))
 
+        # 面积相关
+        area = house.get('area', 0)
+        if isinstance(area, (int, float)):
+            if area > 150:
+                reasons.append(random.choice(["超大空间", "宽境生活", "面积充裕"]))
+            elif area > 100:
+                reasons.append(random.choice(["空间舒适", "居住宽敞", "面积理想"]))
+
+        # 楼层相关
+        floor = house.get('floor', '')
+        if isinstance(floor, str):
+            if '高层' in floor or '顶层' in floor:
+                reasons.append(random.choice(["视野开阔", "采光充足", "景观优越"]))
+            elif '中层' in floor:
+                reasons.append(random.choice(["楼层适中", "出行方便", "居住舒适"]))
+
+        # 朝向相关
+        orientation = house.get('orientation', '')
+        if isinstance(orientation, str) and '南' in orientation:
+            reasons.append(random.choice(["南向采光", "阳光充足", "通风良好"]))
+
+        # 装修相关
+        decoration = house.get('decoration', '')
+        if isinstance(decoration, str):
+            if '精装' in decoration:
+                reasons.append(random.choice(["精装修", "拎包入住", "装修精美"]))
+            elif '毛坯' in decoration:
+                reasons.append(random.choice(["毛坯自由", "DIY空间", "个性定制"]))
+
+        # 年代相关
+        year = house.get('year', 0)
+        if isinstance(year, (int, float)) and year >= 2015:
+            reasons.append(random.choice(["次新房源", "房龄新", "现代建筑"]))
+
+        # 地铁相关
+        near_subway = house.get('near_subway', False)
+        if near_subway:
+            reasons.append(random.choice(["地铁便利", "交通便捷", "出行方便"]))
+
+        # 通用备选理由
+        fallback_reasons = [
+            "性价比高", "品质保证", "值得关注", 
+            "热门房源", "优质推荐", "精选好房",
+            "地段优越", "配套完善", "居住舒适"
+        ]
+
+        # 如果没有理由，添加备选
         if not reasons:
-            reasons.append("性价比高")
-
-        return "、".join(reasons[:2])
+            reasons.extend(random.sample(fallback_reasons, 2))
+        
+        # 随机打乱顺序
+        random.shuffle(reasons)
+        
+        # 返回前2个理由，用顿号连接
+        return "、".join(reasons)

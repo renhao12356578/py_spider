@@ -248,9 +248,8 @@ def generate_ai_report_async():
         # 验证：至少提供area或city之一
         area = data.get('area', '').strip()
         city = data.get('city', '').strip()
-        
         if not area and not city:
-            return jsonify({
+            return jsonify({ "task_id": task_manager.create_task('generate_report', {...}),
                 "code": 400,
                 "message": "请至少提供城市或区域之一"
             }), 400
@@ -271,7 +270,7 @@ def generate_ai_report_async():
         def generate_in_background():
             try:
                 task_manager.update_task(task_id, status='processing', progress=10, message='正在生成报告...')
-                
+                print(f"任务 {task_id} 开始生成报告: 区域={area}, 城市={city}")
                 result = db.generate_ai_report(
                     area=area,
                     report_type=data.get('report_type', '市场分析'),

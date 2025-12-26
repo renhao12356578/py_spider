@@ -69,7 +69,7 @@ class SparkClient:
         })
         return url
 
-    def _gen_params(self, messages, max_tokens=4096, temperature=0.7):
+    def _gen_params(self, messages, max_tokens=9198, temperature=0.7):
         """生成API请求参数"""
         return {
             "header": {
@@ -92,7 +92,7 @@ class SparkClient:
             }
         }
 
-    def chat(self, messages, max_tokens=4096, temperature=0.7, stream_print=False):
+    def chat(self, messages, max_tokens=20000, temperature=0.7, stream_print=False):
         """
         调用星火API进行对话
         

@@ -11,7 +11,7 @@ from wsgiref.handlers import format_date_time
 from time import mktime
 from urllib.parse import urlencode
 from typing import Dict, List, Optional, Tuple
-from ai_service import LLMAIService
+from .ai_service import LLMAIService
 
 # 使用系统连接池
 from utils.database import get_db_connection
@@ -74,7 +74,7 @@ def assemble_ws_auth_url(request_url, method="GET", api_key="", api_secret=""):
     signature_sha = base64.b64encode(signature_sha).decode(encoding='utf-8')
     authorization_origin = "api_key=\"%s\", algorithm=\"%s\", headers=\"%s\", signature=\"%s\"" % (
         api_key, "hmac-sha256", "host date request-line", signature_sha)
-    authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode(encoding='utf-8')
+    authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode('utf-8')
     
     values = {
         "host": host,
@@ -235,6 +235,9 @@ class ReportDatabase:
                 summary=summary,
                 area=area
             )
+            # 如果未生成封面图片，使用默认封面图片
+            if not cover_image_filename:
+                cover_image_filename ="reports_storage/images/default_report_cover.png"
 
             # 6. 保存报告到数据库
             result = self.create_report(
@@ -504,7 +507,7 @@ class ReportDatabase:
                         prefix=f"cover_{timestamp}"
                     )
                     if image_filename:
-                        cover_image_path = os.path.join(self.img_path, image_filename)
+                        cover_image_path ="reports_storage/images/default_report_cover.png"
 
             # 插入数据库记录
             insert_query = """
