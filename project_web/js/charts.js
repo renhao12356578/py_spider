@@ -645,12 +645,12 @@ const Charts = {
       xAxis: {
         type: 'value',
         name: '城市均价 (元/㎡)',
-        axisLabel: { formatter: v => (v/10000).toFixed(0) + '万' }
+        axisLabel: { formatter: v => (v/10000).toFixed(5) + '万' }
       },
       yAxis: {
         type: 'value',
         name: '挂牌量',
-        axisLabel: { formatter: v => (v/10000).toFixed(0) + '万' }
+        axisLabel: { formatter: v => (v/10000).toFixed(3) + '万' }
       },
       series: series
     };

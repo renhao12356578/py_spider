@@ -379,24 +379,136 @@ class AIService:
         return min(100, score)
 
     def _generate_recommendation_reason(self, house: Dict) -> str:
-        """生成推荐理由"""
+        """生成推荐理由（更详细和随机）"""
+        import random
+        
         reasons = []
-
-        region = house.get('region', '')
-        if any(area in region for area in ['海淀', '西城', '东城']):
-            reasons.append("优质学区")
-
+        region = str(house.get('region', ''))
         total_price = house.get('total_price', 0)
-        if total_price < 500:
-            reasons.append("价格适中")
-        elif total_price >= 1000:
-            reasons.append("高端住宅")
-
-        layout = house.get('layout', '')
-        if '3室' in layout or '三室' in layout:
-            reasons.append("户型实用")
-
+        price_per_sqm = house.get('price_per_sqm', 0)
+        layout = str(house.get('layout', ''))
+        area = house.get('area', 0)
+        floor = house.get('floor', '')
+        has_elevator = house.get('has_elevator', '')
+        orientation = str(house.get('orientation', ''))
+        
+        # 区域优势（多种表述）
+        if any(area_name in region for area_name in ['海淀', '西城', '东城']):
+            area_reasons = [
+                f"位于{region}核心区域，教育资源丰富，周边配套成熟",
+                f"{region}地段优越，交通便利，生活配套完善",
+                f"坐落于{region}优质学区，适合有孩子的家庭",
+                f"{region}区域发展成熟，保值增值潜力大"
+            ]
+            reasons.append(random.choice(area_reasons))
+        elif '朝阳' in region:
+            reasons.append(random.choice([
+                f"{region}CBD商圈，工作生活便利，国际化氛围浓厚",
+                f"朝阳区域发展迅速，未来升值空间可观"
+            ]))
+        elif '丰台' in region or '大兴' in region:
+            reasons.append(random.choice([
+                f"{region}新兴区域，发展潜力大，性价比突出",
+                f"位于{region}，价格相对亲民，适合首次置业"
+            ]))
+        
+        # 价格优势
+        if total_price < 300:
+            price_reasons = [
+                f"总价{int(total_price)}万，首付压力小，适合年轻人首次置业",
+                f"价格实惠，总价仅{int(total_price)}万，月供负担轻",
+                f"{int(total_price)}万的总价在同区域具有明显价格优势"
+            ]
+            reasons.append(random.choice(price_reasons))
+        elif total_price < 500:
+            reasons.append(random.choice([
+                f"总价{int(total_price)}万，价格适中，性价比较高",
+                f"{int(total_price)}万的价位在市场中属于主流选择，易于出手"
+            ]))
+        elif total_price < 800:
+            reasons.append(random.choice([
+                f"总价{int(total_price)}万，属于改善型住宅，居住品质有保障",
+                f"价格{int(total_price)}万，适合有一定经济基础的家庭升级置业"
+            ]))
+        else:
+            reasons.append(random.choice([
+                f"高端住宅，总价{int(total_price)}万，品质生活的象征",
+                f"豪宅级别，{int(total_price)}万的定位彰显尊贵身份"
+            ]))
+        
+        # 户型优势
+        if '1室' in layout or '一室' in layout:
+            reasons.append(random.choice([
+                "一居室户型，适合单身或情侣居住，打理方便",
+                "小户型设计紧凑，投资自住两相宜"
+            ]))
+        elif '2室' in layout or '两室' in layout or '二室' in layout:
+            reasons.append(random.choice([
+                "两居室布局合理，适合小家庭或新婚夫妇",
+                "2室户型实用性强，满足基本居住需求",
+                "两居室设计，空间利用率高，居住舒适"
+            ]))
+        elif '3室' in layout or '三室' in layout:
+            reasons.append(random.choice([
+                "三居室户型宽敞，适合三口之家或二孩家庭",
+                "3室格局，功能分区明确，居住体验佳",
+                "三居室空间充足，可满足多样化居住需求"
+            ]))
+        elif '4室' in layout or '四室' in layout:
+            reasons.append("四居室大户型，空间宽敞，适合大家庭或三代同堂")
+        
+        # 面积优势
+        if area > 0:
+            if area < 60:
+                reasons.append(f"建筑面积{area}㎡，小而精致，总价控制合理")
+            elif area < 90:
+                reasons.append(f"{area}㎡适中面积，居住舒适度与经济性兼顾")
+            elif area < 120:
+                reasons.append(f"面积{area}㎡，空间宽敞，居住品质优越")
+            else:
+                reasons.append(f"超大面积{area}㎡，彰显生活品质")
+        
+        # 楼层和电梯
+        floor_str = str(floor) if floor else ''
+        elevator_str = str(has_elevator) if has_elevator else ''
+        if '有电梯' in elevator_str or '电梯' in elevator_str:
+            if '高层' in floor_str or any(str(i) in floor_str for i in range(10, 40)):
+                reasons.append("高楼层配备电梯，出行便利，视野开阔")
+            else:
+                reasons.append("配备电梯，方便老人小孩出行")
+        
+        # 朝向优势
+        if '南' in orientation:
+            reasons.append(random.choice([
+                "南向户型，采光充足，冬暖夏凉",
+                "正南朝向，全天候阳光充沛，居住舒适"
+            ]))
+        elif '南北' in orientation:
+            reasons.append("南北通透，空气流通好，居住环境舒适")
+        
+        # 单价分析
+        if price_per_sqm > 0:
+            if price_per_sqm < 40000:
+                reasons.append(f"单价{price_per_sqm}元/㎡，在同区域中价格优势明显")
+            elif price_per_sqm > 80000:
+                reasons.append(f"单价{price_per_sqm}元/㎡，高端品质住宅")
+        
+        # 随机添加通用优势
+        general_reasons = [
+            "房源真实在售，看房方便，可随时预约",
+            "产权清晰，交易流程顺畅",
+            "周边配套齐全，生活便利",
+            "小区环境优美，物业管理规范",
+            "交通便利，多条公交地铁线路可达"
+        ]
+        if len(reasons) < 3:
+            reasons.extend(random.sample(general_reasons, min(2, 3 - len(reasons))))
+        
+        # 如果还是没有理由，添加默认
         if not reasons:
-            reasons.append("性价比高")
-
-        return "、".join(reasons[:2])
+            reasons.append("综合性价比高，值得考虑的优质房源")
+        
+        # 随机选择3-4个理由，用句号连接
+        selected_count = random.randint(3, min(4, len(reasons)))
+        selected_reasons = random.sample(reasons, selected_count)
+        return "。".join(selected_reasons) + "。"

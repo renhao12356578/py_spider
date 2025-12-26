@@ -92,7 +92,7 @@ class SparkClient:
             }
         }
 
-    def chat(self, messages, max_tokens=4096, temperature=0.7, stream_print=False):
+    def chat(self, messages, max_tokens=9000, temperature=0.7, stream_print=False):
         """
         调用星火API进行对话
         
