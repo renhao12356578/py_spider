@@ -114,6 +114,14 @@ const API = {
     if (endpoint.startsWith('/national/search')) return MockData.national.search;
     if (endpoint.startsWith('/national/trend')) return MockData.national.trend;
     
+    // 高级分析模块 - 新增接口
+    if (endpoint === '/national/clustering') return MockData.national.clustering;
+    if (endpoint.startsWith('/national/heatmap')) return MockData.national.heatmap;
+    if (endpoint.startsWith('/national/listing-ranking')) return MockData.national.listingRanking;
+    if (endpoint.startsWith('/national/district-ranking')) return MockData.national.districtRanking;
+    if (endpoint.startsWith('/national/city-districts')) return MockData.national.cityDistricts;
+    if (endpoint.startsWith('/national/district-change-ranking')) return MockData.national.districtChangeRanking;
+    
     // 北京数据模块
     if (endpoint === '/beijing/overview') return MockData.beijing.overview;
     if (endpoint === '/beijing/district-ranking') return MockData.beijing.districtRanking;
@@ -301,6 +309,58 @@ const API = {
       if (city) params.city = city;
       if (year) params.year = year;
       return API.get('/national/trend', params);
+    },
+    
+    /**
+     * 方案C：城市分级气泡图数据
+     * GET /api/national/clustering
+     */
+    getCityClustering() {
+      return API.get('/national/clustering');
+    },
+    
+    /**
+     * 方案C：区县涨跌比热力图
+     * GET /api/national/heatmap
+     */
+    getDistrictHeatmap(city = '') {
+      const params = {};
+      if (city) params.city = city;
+      return API.get('/national/heatmap', params);
+    },
+    
+    /**
+     * 方案C：挂牌量TOP排行
+     * GET /api/national/listing-ranking
+     */
+    getListingRanking(limit = 20) {
+      return API.get('/national/listing-ranking', { limit });
+    },
+    
+    /**
+     * 方案D：区县价格排行
+     * GET /api/national/district-ranking
+     */
+    getDistrictPriceRanking(limit = 50, city = '') {
+      const params = { limit };
+      if (city) params.city = city;
+      return API.get('/national/district-ranking', params);
+    },
+    
+    /**
+     * 方案D：同城区县对比
+     * GET /api/national/city-districts
+     */
+    getCityDistricts(city) {
+      return API.get('/national/city-districts', { city });
+    },
+    
+    /**
+     * 方案D：区县涨跌榜
+     * GET /api/national/district-change-ranking
+     */
+    getDistrictChangeRanking(limit = 30, order = 'desc') {
+      return API.get('/national/district-change-ranking', { limit, order });
     }
   },
   
