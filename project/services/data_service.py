@@ -968,6 +968,7 @@ def analysis_elevator() -> str:
                        COUNT(*) as count
                 FROM beijing_house_info
                 GROUP BY IFNULL(has_elevator, '未知') \
+                ORDER BY avg_price DESC \
                 """
         cursor.execute(query)
         results = cursor.fetchall()
