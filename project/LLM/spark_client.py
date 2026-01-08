@@ -7,6 +7,8 @@ import hashlib
 import hmac
 import json
 import ssl
+import sys
+import os
 from datetime import datetime
 from time import mktime
 from urllib.parse import urlparse, urlencode
@@ -14,14 +16,17 @@ from wsgiref.handlers import format_date_time
 
 import websocket
 
+# 添加父目录到路径以导入config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import CONFIG
 
-# ================= 默认配置 =================
+# 从环境变量读取配置
 DEFAULT_CONFIG = {
-    "appid": "67e25832",
-    "api_secret": "YTEwMTFjNTFiMTdjY2Q5ZTdhMDNkZmNj",
-    "api_key": "32139567bbcfdbe2309c77f2403abd48",
+    "appid": CONFIG['spark']['appid'],
+    "api_secret": CONFIG['spark']['api_secret'],
+    "api_key": CONFIG['spark']['api_key'],
     "domain": "spark-x",
-    "spark_url": "wss://spark-api.xf-yun.com/v1/x1"
+    "spark_url": CONFIG['spark']['api_host']
 }
 
 

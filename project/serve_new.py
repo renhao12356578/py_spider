@@ -8,6 +8,9 @@ from flask import Flask, redirect
 from pathlib import Path
 import atexit
 
+# 导入配置
+from config import CONFIG, validate_config
+
 # 导入工具函数
 from utils import init_db_pool, close_db_pool
 
@@ -24,8 +27,12 @@ from routes.chart_routes import charts_bp
 # 创建Flask应用
 app = Flask(__name__, static_folder='../project_web', static_url_path='/project_web')
 
-# 用于储存验证码
-app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
+# 从环境变量加载配置
+app.config['SECRET_KEY'] = CONFIG['flask']['secret_key']
+app.config['DEBUG'] = CONFIG['flask']['debug']
+
+# 验证配置
+validate_config()
 
 # 初始化数据库连接池（应用启动时执行一次）
 init_db_pool()
@@ -81,8 +88,14 @@ if __name__ == '__main__':
     # 加载AI聊天会话历史
     load_all_sessions()
     
-    print("=" * 60)
-    print("✅ 服务启动成功!")
-    print("=" * 60)
+    host = CONFIG['flask']['host']
+    port = CONFIG['flask']['port']
+    debug = CONFIG['flask']['debug']
     
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    print("\n" + "="*50)
+    print("🚀 Flask应用启动成功！")
+    print(f"📡 访问地址: http://{host}:{port}")
+    print(f"🔧 调试模式: {'开启' if debug else '关闭'}")
+    print("="*50 + "\n")
+    
+    app.run(debug=debug, host=host, port=port)

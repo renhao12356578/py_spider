@@ -15,13 +15,13 @@ from .ai_service import LLMAIService
 # 使用系统连接池
 from utils.database import get_db_connection
 from tools.house_query import get_area_statistics
+from config import CONFIG
 
-# ============ 讯飞星火图片生成配置 ============
-SPARK_IMAGE_APPID = '67e25832'
-SPARK_IMAGE_API_SECRET = 'YTEwMTFjNTFiMTdjY2Q5ZTdhMDNkZmNj'
-SPARK_IMAGE_API_KEY = '32139567bbcfdbe2309c77f2403abd48'
-SPARK_IMAGE_API_HOST = 'http://spark-api.cn-huabei-1.xf-yun.com/v2.1/tti'
-# ============================================
+# 从环境变量读取讯飞星火图片生成配置
+SPARK_IMAGE_APPID = CONFIG['spark_image']['appid']
+SPARK_IMAGE_API_SECRET = CONFIG['spark_image']['api_secret']
+SPARK_IMAGE_API_KEY = CONFIG['spark_image']['api_key']
+SPARK_IMAGE_API_HOST = CONFIG['spark_image']['api_host']
 
 
 class AssembleHeaderException(Exception):
