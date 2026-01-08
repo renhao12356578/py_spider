@@ -1,4 +1,3 @@
-import pymysql
 import json
 import numpy as np
 import pandas as pd
@@ -6,8 +5,11 @@ from scipy import stats
 from typing import Optional, List, Dict
 from datetime import datetime, timedelta
 import os
-from config import DB_CONFIG, get_db_connection
+import sys
 
+# 添加父目录到路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.database import get_db_connection
 
 # ==================== 历史数据查询接口 ====================
 
@@ -43,29 +45,29 @@ def get_historical_prices(
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 构建查询条件（使用参数化查询以避免注入）
         where_clauses: List[str] = []
         params: List = []
 
-        where_clauses.append("province_name LIKE %s")
+        where_clauses.append("province_name LIKE ?")
         params.append(f"%{province.strip()}%")
 
         if city and city.strip():
-            where_clauses.append("city_name LIKE %s")
+            where_clauses.append("city_name LIKE ?")
             params.append(f"%{city.strip()}%")
 
         if district and district.strip():
-            where_clauses.append("district_name LIKE %s")
+            where_clauses.append("district_name LIKE ?")
             params.append(f"%{district.strip()}%")
 
         if start_date:
-            where_clauses.append("record_date >= %s")
+            where_clauses.append("record_date >= ?")
             params.append(start_date)
 
         if end_date:
-            where_clauses.append("record_date <= %s")
+            where_clauses.append("record_date <= ?")
             params.append(end_date)
 
         where_clause = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
@@ -77,19 +79,19 @@ def get_historical_prices(
             month,
             month_avg_price as avg_price
         FROM trend
-        WHERE city_name LIKE '%{city.strip()}%'
+        {where_clause}
         ORDER BY year ASC, month ASC
         """
 
         # 该查询从 trend 表返回 year/month/avg_price，直接执行（参数已内联到 query 中）
-        cursor.execute(query)
+        cursor.execute(query, params)
         records = cursor.fetchall()
 
         # 格式化数据（根据 SELECT 字段：year/month/avg_price）
         formatted_records = []
         for record in records:
-            year = record.get('year')
-            month = record.get('month')
+            year = record[0]
+            month = record[1]
             # 构造便于展示的日期字符串，例如 "2024-07"
             try:
                 month_int = int(month)
@@ -102,8 +104,8 @@ def get_historical_prices(
                 "month": month,
                 "date": date_str,
                 "city": city or "",
-                "avg_price": int(record['avg_price']) if record.get('avg_price') is not None else 0,
-                "price": int(record['avg_price']) if record.get('avg_price') is not None else 0
+                "avg_price": int(record[2]) if record[2] is not None else 0,
+                "price": int(record[2]) if record[2] is not None else 0
             })
 
         response = {
@@ -565,6 +567,7 @@ def simplified_batch_predict_and_export(cities: List[str], province_override: Op
         # 显示数据示例
         print("\nPredictions data sample (first 5 rows):")
         print(pred_df.head())
+
     else:
         pred_path = None
         print("Warning: No prediction data to export")

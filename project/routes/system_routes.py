@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from utils import get_db_connection
-import pymysql
 
 system_bp = Blueprint('system', __name__, url_prefix='/api/system')
 
@@ -47,11 +46,11 @@ def get_data_update_time():
                 "data": {"last_update": "2024-12-24"}
             })
         
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor()
         
         # 使用正确的表名 beijing_house_info
         cursor.execute("""
-            SELECT MAX(DATE(NOW())) as last_update 
+            SELECT MAX(DATE(datetime('now'))) as last_update 
             FROM beijing_house_info
             LIMIT 1
         """)
@@ -114,7 +113,7 @@ def submit_feedback():
         
         cursor.execute("""
             INSERT INTO system_feedback (type, content, contact)
-            VALUES (%s, %s, %s)
+            VALUES (?, ?, ?)
         """, (feedback_type, content, contact))
         
         conn.commit()

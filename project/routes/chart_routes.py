@@ -11,14 +11,14 @@ from utils.auth import require_auth
 template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'template')
 sys.path.insert(0, template_path)
 
-# 导入图表构建器
-try:
-    from Bar import TiDBChartBuilder as BarChartBuilder
-    from Line import TiDBChartBuilder as LineChartBuilder
-except ImportError as e:
-    print(f"导入图表模板失败: {e}")
-    BarChartBuilder = None
-    LineChartBuilder = None
+# 导入图表构建器（注释掉未使用的导入）
+# try:
+#     from Bar import TiDBChartBuilder as BarChartBuilder
+#     from Line import TiDBChartBuilder as LineChartBuilder
+# except ImportError as e:
+#     print(f"导入图表模板失败: {e}")
+BarChartBuilder = None
+LineChartBuilder = None
 
 # 蓝图定义
 charts_bp = Blueprint('charts', __name__, url_prefix='/api/charts')

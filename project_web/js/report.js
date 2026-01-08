@@ -66,10 +66,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         html += `
           <div class="report-item" data-id="${report.id}">
             <div class="report-cover">
-              ${report.cover_image ? 
-                `<img src="${report.cover_image}" alt="${report.title}">` : 
-                '<i data-lucide="file-text"></i>'
-              }
+              <i data-lucide="file-text"></i>
             </div>
             <div class="report-content">
               <h4 class="report-title">${report.title}</h4>

@@ -5,3 +5,8 @@ web/spider
 claw_homework
 .cunzhi-memory
 .vscode/settings.json
+
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+*$py.class

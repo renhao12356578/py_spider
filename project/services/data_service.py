@@ -3,7 +3,6 @@
 提供房产数据的查询和分析服务
 使用数据库连接池提升性能
 """
-import pymysql
 import json
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
@@ -33,14 +32,14 @@ def user_login(username: str, password: str) -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 查询用户（注意：生产环境应使用密码加密存储，此处为演示）
         query = """
                 SELECT id, username \
                 FROM users
-                WHERE username = %s \
-                  AND password_hash = %s \
+                WHERE username = ? \
+                  AND password_hash = ? \
                 """
         cursor.execute(query, (username.strip(), password.strip()))
         user = cursor.fetchone()
@@ -91,7 +90,7 @@ def get_national_overview() -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 合并为单次查询（优化性能）
         query = """
@@ -112,13 +111,13 @@ def get_national_overview() -> str:
         # 获取最高/最低价格城市名称
         cursor.execute("""
             SELECT city_name, city_avg_price FROM current_price 
-            WHERE city_avg_price = %s LIMIT 1
+            WHERE city_avg_price = ? LIMIT 1
         """, (stats['max_price'],))
         highest_city = cursor.fetchone() or {'city_name': '未知', 'city_avg_price': 0}
 
         cursor.execute("""
             SELECT city_name, city_avg_price FROM current_price 
-            WHERE city_avg_price = %s LIMIT 1
+            WHERE city_avg_price = ? LIMIT 1
         """, (stats['min_price'],))
         lowest_city = cursor.fetchone() or {'city_name': '未知', 'city_avg_price': 0}
 
@@ -169,7 +168,7 @@ def get_city_prices(province: str, min_price: Optional[int] = None, max_price: O
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         
         print(f"🔍 [DEBUG] 开始查询城市房价数据:")
         print(f"    省份: {province if province and province.strip() else '全国'}")
@@ -181,14 +180,14 @@ def get_city_prices(province: str, min_price: Optional[int] = None, max_price: O
         query_params = []
         
         if province and province.strip():
-            where_conditions.append("province_name LIKE %s")
+            where_conditions.append("province_name LIKE ?")
             query_params.append(f"%{province.strip()}%")
         
         if min_price is not None and min_price > 0:
-            where_conditions.append("city_avg_price >= %s")
+            where_conditions.append("city_avg_price >= ?")
             query_params.append(min_price)
         if max_price is not None and max_price > 0:
-            where_conditions.append("city_avg_price <= %s")
+            where_conditions.append("city_avg_price <= ?")
             query_params.append(max_price)
         
         where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
@@ -286,7 +285,7 @@ def get_province_list() -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = """
                 SELECT DISTINCT province_name
@@ -348,7 +347,7 @@ def get_city_ranking(rank_type: str, limit: int = 10, order: str = "desc") -> st
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 映射排行类型到数据库字段
         type_field_map = {
@@ -438,7 +437,7 @@ def search_city(keyword: str) -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 使用参数化查询，避免SQL注入
         query = """
@@ -448,8 +447,8 @@ def search_city(keyword: str) -> str:
             city_avg_price
         FROM current_price
         WHERE 
-            city_name LIKE %s 
-            OR province_name LIKE %s
+            city_name LIKE ? 
+            OR province_name LIKE ?
         ORDER BY city_avg_price DESC
         LIMIT 20
         """
@@ -504,7 +503,7 @@ def get_price_trend(city: str, year: Optional[int] = None) -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 构建年份条件
         year_condition = ""
@@ -606,7 +605,7 @@ def get_beijing_overview() -> str:
         return json.dumps({"code": 500, "msg": "数据库连接失败"})
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 1. 基础统计（平均单价、平均总价、总记录数）
         basic_query = """
@@ -660,7 +659,7 @@ def get_district_ranking() -> str:
         return json.dumps({"code": 500, "msg": "数据库连接失败"})
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = """
         SELECT region as district, 
@@ -707,7 +706,7 @@ def get_district_prices() -> str:
         return json.dumps({"code": 500, "msg": "数据库连接失败"})
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = """
                 SELECT region                       as name, \
@@ -751,7 +750,7 @@ def analysis_floor() -> str:
         return json.dumps({"code": 500, "msg": "数据库连接失败"})
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 先获取总记录数
         cursor.execute("SELECT COUNT(*) as total FROM beijing_house_info WHERE floor IS NOT NULL")
@@ -825,7 +824,7 @@ def analysis_layout() -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 核心修改：子查询先统一户型分类，外层再按统一户型分组聚合
         query = """
@@ -834,22 +833,19 @@ def analysis_layout() -> str:
                        ROUND(AVG(total_price), 0)   as avg_total, \
                        COUNT(*) as count
                 FROM (
-                    -- 子查询：将原始细分户型转换为统一户型（1室/2室/3室/4室+/未知）
                     SELECT
                     price_per_sqm, total_price, CASE
-                    WHEN layout REGEXP '^1室' THEN '1室'
-                    WHEN layout REGEXP '^2室' THEN '2室'
-                    WHEN layout REGEXP '^3室' THEN '3室'
-                    WHEN layout REGEXP '^4室|^5室|^6室' THEN '4室+'
+                    WHEN layout LIKE '1室%' THEN '1室'
+                    WHEN layout LIKE '2室%' THEN '2室'
+                    WHEN layout LIKE '3室%' THEN '3室'
+                    WHEN layout LIKE '4室%' OR layout LIKE '5室%' OR layout LIKE '6室%' THEN '4室+'
                     ELSE '未知'
                     END as unified_layout
                     FROM beijing_house_info
                     WHERE layout IS NOT NULL
                     ) as converted_houses
-                -- 外层按统一户型分组，确保每种户型仅一条记录
                 GROUP BY unified_layout
-                -- 按记录数降序排序，便于前端展示
-                ORDER BY count DESC \
+                ORDER BY count DESC
                 """
 
         cursor.execute(query)
@@ -899,9 +895,8 @@ def analysis_orientation() -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
-        # 核心修改：1. 先分组聚合 2. 筛选CHAR_LENGTH(orientation) <= 2 3. 过滤空字符串
         query = """
                 SELECT orientation, \
                        ROUND(AVG(price_per_sqm), 0) as avg_price, \
@@ -909,12 +904,12 @@ def analysis_orientation() -> str:
                 FROM beijing_house_info
                 WHERE
                     orientation IS NOT NULL
-                  AND orientation != ''              -- 过滤空字符串
-                  AND CHAR_LENGTH (orientation) <= 2 -- 仅保留1-2个汉字的朝向
+                  AND orientation != ''
+                  AND LENGTH(orientation) <= 2
                   AND orientation != '南北'
                   AND orientation != '东西'  
-                GROUP BY orientation -- 确保每种有效朝向仅一条记录
-                ORDER BY count DESC -- 按房源数量降序排序 \
+                GROUP BY orientation
+                ORDER BY count DESC
                 """
 
         cursor.execute(query)
@@ -960,7 +955,7 @@ def analysis_elevator() -> str:
         return json.dumps({"code": 500, "msg": "数据库连接失败"})
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = """
                 SELECT IFNULL(has_elevator, '未知') as has_elevator, \
@@ -1011,7 +1006,7 @@ def get_scatter_data(district: Optional[str] = None, limit: int = 1000) -> str:
         return json.dumps({"code": 500, "msg": "数据库连接失败"})
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 构建查询条件
         where_clause = ""
@@ -1026,8 +1021,8 @@ def get_scatter_data(district: Optional[str] = None, limit: int = 1000) -> str:
             region as district
         FROM beijing_house_info
         {where_clause}
-        ORDER BY RAND()
-        LIMIT {min(limit, 5000)}  # 限制最大5000个数据点，避免数据过大
+        ORDER BY RANDOM()
+        LIMIT {min(limit, 5000)}
         """
         cursor.execute(query)
         results = cursor.fetchall()
@@ -1071,7 +1066,7 @@ def get_boxplot_data(district: str) -> str:
             return json.dumps({"code": 500, "msg": "数据库连接失败"}, ensure_ascii=False)
         
         try:
-            cursor = connection.cursor(pymysql.cursors.DictCursor)
+            cursor = connection.cursor()
             
             # 简化查询：直接使用原始列名，不使用别名price
             query_all_districts = """
@@ -1145,7 +1140,7 @@ def get_boxplot_data(district: str) -> str:
         return json.dumps({"code": 500, "msg": "数据库连接失败"}, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         
         # 修正原始查询中的列名问题
         query = f"""
@@ -1226,7 +1221,7 @@ def get_city_clustering() -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = """
         SELECT 
@@ -1302,7 +1297,7 @@ def get_district_change_heatmap(city: Optional[str] = None) -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         where_conditions = ["district_ratio IS NOT NULL", "district_avg_price > 0"]
         if city and city.strip():
@@ -1366,7 +1361,7 @@ def get_listing_top_ranking(limit: int = 20) -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         limit = max(1, min(limit, 50))
 
         query = f"""
@@ -1427,7 +1422,7 @@ def get_district_price_ranking(limit: int = 50, city: Optional[str] = None) -> s
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         limit = max(1, min(limit, 100))
 
         where_conditions = ["district_avg_price IS NOT NULL", "district_avg_price > 0"]
@@ -1500,7 +1495,7 @@ def get_city_districts_comparison(city: str) -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = f"""
         SELECT
@@ -1569,7 +1564,7 @@ def get_district_change_ranking(limit: int = 30, order: str = "desc") -> str:
         }, ensure_ascii=False)
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         limit = max(1, min(limit, 100))
         order = order.upper() if order.lower() in ['desc', 'asc'] else 'DESC'
 
@@ -1635,7 +1630,7 @@ def query_houses_list(
         return json.dumps({"code": 500, "msg": "数据库连接失败"})
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 构建查询条件
         where_conditions = []

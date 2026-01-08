@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-import pymysql
 import hashlib
 from utils import get_db_connection, require_auth
 
@@ -24,10 +23,10 @@ def get_user_profile():
         }), 500
     
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         
         # 先检查用户是否存在
-        check_query = "SELECT COUNT(*) as count FROM users WHERE id = %s"
+        check_query = "SELECT COUNT(*) as count FROM users WHERE id = ?"
         cursor.execute(check_query, (user_id,))
         count_result = cursor.fetchone()
         print(f"🔍 [DEBUG] 用户存在检查结果: {count_result}")
@@ -49,7 +48,7 @@ def get_user_profile():
             COALESCE(nickname, username) as nickname,
             COALESCE(avatar_url, '') as avatar_url,
             created_at
-        FROM users WHERE id = %s
+        FROM users WHERE id = ?
         """
         
         print(f"🔍 [DEBUG] 执行用户查询: {query}")
@@ -156,12 +155,12 @@ def update_user_profile():
     
     cursor = None
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         
         # 首先获取用户当前信息
         current_user_query = """
         SELECT username, nickname, email, phone 
-        FROM users WHERE id = %s
+        FROM users WHERE id = ?
         """
         cursor.execute(current_user_query, (user_id,))
         current_user = cursor.fetchone()
@@ -237,7 +236,7 @@ def update_user_profile():
             if new_username != current_username:
                 if new_username:  # 新用户名不为空
                     # 检查用户名是否已存在（排除当前用户）
-                    check_query = "SELECT COUNT(*) as count FROM users WHERE username = %s AND id != %s"
+                    check_query = "SELECT COUNT(*) as count FROM users WHERE username = ? AND id != ?"
                     cursor.execute(check_query, (new_username, user_id))
                     check_result = cursor.fetchone()
                     
@@ -297,14 +296,14 @@ def update_user_profile():
             if value is None:
                 sql_fields.append(f"{field} = NULL")
             else:
-                sql_fields.append(f"{field} = %s")
+                sql_fields.append(f"{field} = ?")
                 sql_values.append(value)
         
         # 添加更新时间
-        sql_fields.append("updated_at = NOW()")
+        sql_fields.append("updated_at = datetime('now')")
         
         # 构建完整的SQL查询
-        query = f"UPDATE users SET {', '.join(sql_fields)} WHERE id = %s"
+        query = f"UPDATE users SET {', '.join(sql_fields)} WHERE id = ?"
         sql_values.append(user_id)
         
         print(f"🔍 [DEBUG] 执行更新查询: {query}")
@@ -319,7 +318,7 @@ def update_user_profile():
                COALESCE(nickname, username) as nickname,
                COALESCE(avatar_url, '') as avatar_url,
                created_at, updated_at
-        FROM users WHERE id = %s
+        FROM users WHERE id = ?
         """
         cursor.execute(select_query, (user_id,))
         updated_user = cursor.fetchone()
@@ -421,10 +420,10 @@ def change_password():
         }), 500
     
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         
         # 获取当前用户的密码哈希
-        query = "SELECT password_hash FROM users WHERE id = %s"
+        query = "SELECT password_hash FROM users WHERE id = ?"
         cursor.execute(query, (user_id,))
         user = cursor.fetchone()
         
@@ -455,7 +454,7 @@ def change_password():
             }), 400
         
         # 更新密码（使用SHA256哈希）
-        update_query = "UPDATE users SET password_hash = %s WHERE id = %s"
+        update_query = "UPDATE users SET password_hash = ? WHERE id = ?"
         cursor.execute(update_query, (new_password_hash, user_id))
         connection.commit()
         

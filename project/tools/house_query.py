@@ -3,7 +3,6 @@
 提供智能房源查询、区域统计等功能
 使用数据库连接池
 """
-import pymysql
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
@@ -39,7 +38,7 @@ def query_houses_by_requirements(requirements: dict, limit: int = 20) -> List[Di
         return []
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 构建WHERE条件
         conditions = []
@@ -49,45 +48,45 @@ def query_houses_by_requirements(requirements: dict, limit: int = 20) -> List[Di
         if requirements.get('district'):
             district = requirements['district']
             conditions.append("""(
-                region LIKE %s 
+                region LIKE ? 
             )""")
             like_param = f"%{district}%"
             params.extend([like_param])
 
         # 2. 预算条件（总价）
         if requirements.get('budget_min') is not None:
-            conditions.append("total_price >= %s")
+            conditions.append("total_price >= ?")
             params.append(requirements['budget_min'])
 
         if requirements.get('budget_max') is not None:
-            conditions.append("total_price <= %s")
+            conditions.append("total_price <= ?")
             params.append(requirements['budget_max'])
 
         # 3. 面积条件
         if requirements.get('area_min') is not None:
-            conditions.append("area >= %s")
+            conditions.append("area >= ?")
             params.append(requirements['area_min'])
 
         if requirements.get('area_max') is not None:
-            conditions.append("area <= %s")
+            conditions.append("area <= ?")
             params.append(requirements['area_max'])
 
         # 4. 户型条件
         if requirements.get('layout'):
-            conditions.append("layout LIKE %s")
+            conditions.append("layout LIKE ?")
             params.append(f"%{requirements['layout']}%")
 
         # 5. 楼层偏好（可选，根据你的数据库字段调整）
         if requirements.get('floor_pref'):
             floor_pref = requirements['floor_pref']
             if floor_pref == '低层':
-                conditions.append("floor < %s")
+                conditions.append("floor < ?")
                 params.append(6)
             elif floor_pref == '中层':
-                conditions.append("(floor >= %s AND floor <= %s)")
+                conditions.append("(floor >= ? AND floor <= ?)")
                 params.extend([6, 12])
             elif floor_pref == '高层':
-                conditions.append("floor > %s")
+                conditions.append("floor > ?")
                 params.append(12)
 
         # 构建完整SQL
@@ -96,8 +95,8 @@ def query_houses_by_requirements(requirements: dict, limit: int = 20) -> List[Di
         query = f"""
         SELECT * FROM beijing_house_info 
         WHERE {where_clause}
-        ORDER BY RAND()
-        LIMIT %s
+        ORDER BY RANDOM()
+        LIMIT ?
         """
 
         params.append(limit)
@@ -146,44 +145,44 @@ def count_matched_houses(requirements: dict) -> int:
         if requirements.get('district'):
             district = requirements['district']
             conditions.append("""(
-                region LIKE %s 
-                OR business_area LIKE %s 
-                OR community LIKE %s
-                OR location LIKE %s
+                region LIKE ? 
+                OR business_area LIKE ? 
+                OR community LIKE ?
+                OR location LIKE ?
             )""")
             like_param = f"%{district}%"
             params.extend([like_param, like_param, like_param, like_param])
 
         if requirements.get('budget_min') is not None:
-            conditions.append("total_price >= %s")
+            conditions.append("total_price >= ?")
             params.append(requirements['budget_min'])
 
         if requirements.get('budget_max') is not None:
-            conditions.append("total_price <= %s")
+            conditions.append("total_price <= ?")
             params.append(requirements['budget_max'])
 
         if requirements.get('area_min') is not None:
-            conditions.append("area >= %s")
+            conditions.append("area >= ?")
             params.append(requirements['area_min'])
 
         if requirements.get('area_max') is not None:
-            conditions.append("area <= %s")
+            conditions.append("area <= ?")
             params.append(requirements['area_max'])
 
         if requirements.get('layout'):
-            conditions.append("layout LIKE %s")
+            conditions.append("layout LIKE ?")
             params.append(f"%{requirements['layout']}%")
 
         if requirements.get('floor_pref'):
             floor_pref = requirements['floor_pref']
             if floor_pref == '低层':
-                conditions.append("floor < %s")
+                conditions.append("floor < ?")
                 params.append(6)
             elif floor_pref == '中层':
-                conditions.append("(floor >= %s AND floor <= %s)")
+                conditions.append("(floor >= ? AND floor <= ?)")
                 params.extend([6, 12])
             elif floor_pref == '高层':
-                conditions.append("floor > %s")
+                conditions.append("floor > ?")
                 params.append(12)
 
         where_clause = " AND ".join(conditions) if conditions else "1=1"
@@ -216,10 +215,10 @@ def query_house_data_by_area(area_name: str, limit: int = 20) -> Tuple[List[Dict
         return [], []
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 首先获取表结构 - 使用SHOW COLUMNS替代DESCRIBE
-        cursor.execute("SHOW COLUMNS FROM beijing_house_info")
+        cursor.execute("PRAGMA table_info(beijing_house_info)")
         columns_info = cursor.fetchall()
 
         # 打印调试信息，查看实际返回的数据结构
@@ -232,8 +231,8 @@ def query_house_data_by_area(area_name: str, limit: int = 20) -> Tuple[List[Dict
         column_names = []
         for col in columns_info:
             # 尝试不同的键名，因为不同数据库可能有不同的键名
-            if 'Field' in col:
-                column_names.append(col['Field'])
+            if 'name' in col:
+                column_names.append(col['name'])
             elif 'field' in col:
                 column_names.append(col['field'])
             elif 'COLUMN_NAME' in col:
@@ -255,7 +254,7 @@ def query_house_data_by_area(area_name: str, limit: int = 20) -> Tuple[List[Dict
             OR business_area LIKE '%{area_name}%' 
             OR community LIKE '%{area_name}%'
             OR location LIKE '%{area_name}%'
-        ORDER BY RAND()
+        ORDER BY RANDOM()
         LIMIT {limit}
         """
 
@@ -293,7 +292,7 @@ def query_all_distinct_locations() -> Tuple[List[Dict], List[str]]:
         return [], []
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 使用UNION ALL合并三个查询为一次
         query = """
@@ -349,7 +348,7 @@ def query_all_distinct_regions() -> Tuple[List[Dict], List[str]]:
         return [], []
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = "SELECT DISTINCT region as 区域名称 FROM beijing_house_info WHERE region IS NOT NULL AND region != '' ORDER BY region"
 
@@ -388,7 +387,7 @@ def query_all_distinct_business_areas() -> Tuple[List[Dict], List[str]]:
         return [], []
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = "SELECT DISTINCT business_area as 商圈名称 FROM beijing_house_info WHERE business_area IS NOT NULL AND business_area != '' ORDER BY business_area"
 
@@ -427,7 +426,7 @@ def query_all_distinct_communities() -> Tuple[List[Dict], List[str]]:
         return [], []
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = "SELECT DISTINCT community as 小区名称 FROM beijing_house_info WHERE community IS NOT NULL AND community != ''"
 
@@ -466,7 +465,7 @@ def query_houses_by_business_area(business_area: str, limit: int = 50) -> Tuple[
         return [], []
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         # 首先获取表结构
         cursor.execute("SHOW COLUMNS FROM beijing_house_info")
@@ -538,9 +537,9 @@ def query_house_by_id(house_id):
         return None
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
-        query = "SELECT * FROM beijing_house_info WHERE house_id = %s"
+        query = "SELECT * FROM beijing_house_info WHERE house_id = ?"
         cursor.execute(query, (house_id,))
         result = cursor.fetchone()
 
@@ -573,12 +572,12 @@ def get_area_average_price(region):
         return None
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
 
         query = """
         SELECT AVG(unit_price) as avg_price 
         FROM beijing_house_info 
-        WHERE region LIKE %s AND unit_price > 0
+        WHERE region LIKE ? AND unit_price > 0
         """
         cursor.execute(query, (f'%{region}%',))
         result = cursor.fetchone()
@@ -622,7 +621,7 @@ def get_area_statistics(area_name: str, city: str = None) -> Dict:
         }
 
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         
         # 判断数据来源：优先查询北京数据，如果没有则查询全国数据
         data_source = 'beijing'

@@ -143,7 +143,7 @@ def create_report():
             report_type=data.get('type'),
             city=data.get('city'),
             user_id=current_user,
-            generate_image=data.get('generate_image', True)
+            generate_image=False
         )
 
         if result.get("success"):
@@ -521,59 +521,6 @@ def get_area_statistics_api():
         return jsonify({
             "code": 500,
             "message": f"获取统计信息失败: {str(e)}"
-        }), 500
-
-
-# ============ 生成图片 ============
-
-@reports_bp.route('/<int:report_id>/generate-image', methods=['POST'])
-@require_auth
-def generate_content_image(report_id):
-    """为报告内容生成图片"""
-    try:
-        data = request.get_json()
-
-        report = db.get_report_full_content(report_id)
-        if not report:
-            return jsonify({
-                "code": 404,
-                "message": "报告不存在"
-            }), 404
-
-        content = data.get('content') or report.get('content', '')[:500]
-        title = data.get('title', report.get('title'))
-
-        image_result = db.ai_service.generate_image_for_content(content, title)
-
-        if image_result.get("success"):
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            image_filename = db.save_image_from_base64(
-                image_result["image_data"],
-                prefix=f"content_{report_id}_{timestamp}"
-            )
-
-            if image_filename:
-                db._associate_image_with_report(report_id, image_filename, "content_generated")
-
-                return jsonify({
-                    "code": 200,
-                    "data": {
-                        "image_generated": True,
-                        "image_filename": image_filename,
-                        "image_path": os.path.join(db.img_path, image_filename)
-                    }
-                })
-
-        return jsonify({
-            "code": 500,
-            "message": "图片生成失败",
-            "details": image_result
-        }), 500
-
-    except Exception as e:
-        return jsonify({
-            "code": 500,
-            "message": f"图片生成失败: {str(e)}"
         }), 500
 
 

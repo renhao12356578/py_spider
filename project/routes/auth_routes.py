@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify, session
-import pymysql
 import hashlib
 import random
 import time
@@ -50,13 +49,13 @@ def login():
             }), 500
         
         try:
-            cursor = connection.cursor(pymysql.cursors.DictCursor)
+            cursor = connection.cursor()
             
             # 查询用户 - 支持用户名或邮箱登录
             query = """
             SELECT id, username, password_hash, email
             FROM users
-            WHERE username = %s OR email = %s
+            WHERE username = ? OR email = ?
             """
             cursor.execute(query, (username.strip(), username.strip()))
             user = cursor.fetchone()
@@ -212,10 +211,10 @@ def register():
         }), 500
     
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        cursor = connection.cursor()
         
         # 检查用户名是否已存在
-        check_username_query = "SELECT COUNT(*) as count FROM users WHERE username = %s"
+        check_username_query = "SELECT COUNT(*) as count FROM users WHERE username = ?"
         cursor.execute(check_username_query, (username,))
         username_result = cursor.fetchone()
         username_count = username_result['count'] if isinstance(username_result, dict) else username_result[0]
@@ -230,7 +229,7 @@ def register():
             }), 400
         
         # 检查邮箱是否已存在
-        check_email_query = "SELECT COUNT(*) as count FROM users WHERE email = %s"
+        check_email_query = "SELECT COUNT(*) as count FROM users WHERE email = ?"
         cursor.execute(check_email_query, (email,))
         email_result = cursor.fetchone()
         email_count = email_result['count'] if isinstance(email_result, dict) else email_result[0]
@@ -246,7 +245,7 @@ def register():
         
         # 检查手机号是否已注册（如果提供）
         if phone:
-            check_phone_query = "SELECT COUNT(*) as count FROM users WHERE phone = %s"
+            check_phone_query = "SELECT COUNT(*) as count FROM users WHERE phone = ?"
             cursor.execute(check_phone_query, (phone,))
             phone_result = cursor.fetchone()
             phone_count = phone_result['count'] if isinstance(phone_result, dict) else phone_result[0]
@@ -288,7 +287,7 @@ def register():
         # 插入新用户
         insert_query = """
         INSERT INTO users (id, username, email, phone, password_hash, nickname, avatar_url, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
         """
         
         cursor.execute(insert_query, (new_user_id, username, email, phone or None, password_hash, nickname, avatar_url))
@@ -311,7 +310,7 @@ def register():
             notification_insert_query = """
             INSERT INTO notification_settings 
             (id, user_id, price_alert, new_listing, market_report, system_notice, email_notify, sms_notify, created_at)
-            VALUES (%s, %s, 1, 1, 0, 1, 0, 0, NOW())
+            VALUES (?, ?, 1, 1, 0, 1, 0, 0, datetime('now'))
             """
             cursor.execute(notification_insert_query, (notification_new_id, new_user_id))
             connection.commit()
@@ -387,8 +386,8 @@ def check_username():
         }), 500
     
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
-        query = "SELECT COUNT(*) as count FROM users WHERE username = %s"
+        cursor = connection.cursor()
+        query = "SELECT COUNT(*) as count FROM users WHERE username = ?"
         cursor.execute(query, (username,))
         result = cursor.fetchone()
         
@@ -434,8 +433,8 @@ def check_email():
         }), 500
     
     try:
-        cursor = connection.cursor(pymysql.cursors.DictCursor)
-        query = "SELECT COUNT(*) as count FROM users WHERE email = %s"
+        cursor = connection.cursor()
+        query = "SELECT COUNT(*) as count FROM users WHERE email = ?"
         cursor.execute(query, (email,))
         result = cursor.fetchone()
         
